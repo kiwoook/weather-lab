@@ -19,7 +19,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:#DCE1E7;font-family:'IBM Plex Sans KR',system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{word-break:keep-all;overflow-wrap:anywhere;background:#DCE1E7;font-family:'IBM Plex Sans KR',system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--pt);outline-offset:2px}
@@ -116,6 +116,7 @@ svg{display:block;flex:none}
 .wb.load{background:transparent;padding:6px 12px}
 .spin{display:inline-block;width:20px;height:20px;border-radius:50%;border:2.5px solid #D6DEE8;border-top-color:var(--pt);animation:spin .8s linear infinite;flex:none}
 .spin.lg{width:34px;height:34px;border-width:3px}
+.spin.xs{width:12px;height:12px;border-width:2px}
 .loading{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:13px;color:var(--sub)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{font-size:13px;color:var(--mute);padding:14px 4px}
@@ -170,14 +171,16 @@ svg{display:block;flex:none}
 .prog{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:10px 16px 6px}
 .prog i{height:4px;border-radius:2px;background:#D6DCE3;transition:background .25s}
 .prog i.on{background:var(--pt)}
-.wscroll{flex:1;overflow-y:auto;padding:8px 16px 28px}
-.sum{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 14px;border:0;background:#fff;border-radius:14px;margin-bottom:6px;text-align:left}
-.sum .k{font-size:12px;color:var(--mute);width:48px;flex:none}
-.sum .v{flex:1;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sum .e{font-size:12px;color:var(--pt);font-weight:600}
+.wscroll{position:relative;flex:1;overflow-y:auto;padding:8px 16px 28px}
+.sumline{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 4px}
+.sp{position:relative;display:inline-flex;align-items:center;gap:4px;min-height:36px;max-width:100%;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp::before{content:'';position:absolute;inset:-4px 0}   /* 탭 영역 44px */
+.sp svg{width:14px;height:14px;color:var(--sub)}
 .panel{background:#fff;border-radius:22px;padding:20px 16px 18px;margin-top:10px}
 .panel h3{font-size:22px;margin:0 0 14px;letter-spacing:-.3px;outline:none}
 .panel h4{font-size:13px;color:var(--sub);margin:18px 0 8px;font-weight:600}
+.h4sub{font-weight:500;color:var(--mute);margin-left:4px}
+.hint.warn{color:var(--warn);font-weight:600}
 .rise{animation:rise .4s cubic-bezier(.2,.8,.2,1) both}
 @keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
 .bbar{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
@@ -206,6 +209,9 @@ mark{background:none;color:var(--pt);font-weight:700}
 .chip svg{width:16px;height:16px;color:var(--sub)}
 .chip.on{background:var(--pt);color:#fff;border-color:var(--pt)}
 .chip.on svg{color:#fff}
+.chip small{font-size:12px;font-weight:500;color:var(--sub)}
+.chip.on small{color:#DCE7FB}
+.chip:disabled{color:#AEB7C2;background:var(--bg);border-color:transparent;cursor:default}
 
 .cal-h{display:flex;align-items:center;justify-content:space-between;margin:18px 0 4px}
 .cal-h b{font-size:15px}
@@ -238,8 +244,6 @@ mark{background:none;color:var(--pt);font-weight:700}
 .tile b{font-size:15px}
 .tile .tw{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub);font-weight:500}
 .tile .tw svg{width:14px;height:14px}
-.tile.bad{background:var(--warn-bg)}
-.tile.bad .tw{color:var(--warn)}
 .tile.on{border-color:var(--pt);background:var(--pt-soft)}
 .tile.on b{color:var(--pt)}
 .hint{font-size:13px;color:var(--sub);margin:10px 2px 0}
@@ -614,9 +618,8 @@ function badge(t) {
   if (isPast(t)) return `<span class="wb gray">${t.done ? '완료' : '지남'}</span>`;
   if (!f.forecast_available) return `<span class="wb wait">${I.clock}대기</span>`;
   const k = wxKind(f);
-  // 비 알림을 건 일정은 기온과 강수확률을 함께
   const txt = k === 'thunder' ? `뇌우 ${f.pop}%` : isRain(f) ? `비 ${f.pop}%` : isWind(f) ? `바람 ${f.wind}m/s`
-    : t.alerts.includes('rain') ? `${f.temp}°<small>· ${f.pop}%</small>` : `${f.temp}°`;
+    : `${f.temp}°<small>· ${f.pop}%</small>`;
   return `<span class="wb t-${tone(f)} k-${k}">${wxIcon(f)}${txt}</span>`;
 }
 function rowHTML(t, nextId) {
@@ -686,128 +689,192 @@ function openInbox() { inboxReturn = document.activeElement; renderInbox(); $('#
 function closeInbox() { $('#inbox').hidden = true; inboxReturn?.focus?.(); }
 
 /* ===================== 화면 2. 할 일 추가 ===================== */
-const W = { step: 1, d: null, vm: null, list: [] };
+// 단계: 1 무엇을 → 2 어디서 → 3 날짜 → 4 시간 → 5 날씨 알림
+const W = { step: 1, max: 1, d: null, vm: null, list: [], fills: [], dupOk: false };
 function openAdd() {
-  W.step = 1; W.vm = null;
+  W.step = 1; W.max = 1; W.vm = null; W.dupOk = false;
   W.d = { title: '', date: null, time: null, sido: null, district: null, alerts: ['rain'], timing: 'day' };
   show('add'); renderWizard(true);
 }
-const valid = s => s === 1 ? !!W.d.title.trim() : s === 2 ? !!W.d.date : s === 3 ? !!W.d.time : s === 4 ? !!(W.d.sido && W.d.district) : true;
+const nowHM = () => `${pad(now().getHours())}:${pad(now().getMinutes())}`;
+const pastSlot = (date, time) => date === TODAY && time <= nowHM();
+const valid = s => ({
+  1: () => !!W.d.title.trim(),
+  2: () => !!(W.d.sido && W.d.district),
+  3: () => !!W.d.date,
+  4: () => !!W.d.time && !pastSlot(W.d.date, W.d.time),
+  5: () => W.d.alerts.length > 0,
+})[s]();
 function go(n) {
-  if (n === 3 && !W.d.time) {
-    const h = W.d.date === TODAY ? Math.min(23, now().getHours() + 1) : 9;
-    W.d.time = `${pad(h)}:00`;
-  }
-  W.step = n; renderWizard(true);
+  if (n === 4 && !W.d.time) W.d.time = W.d.date === TODAY ? `${pad(Math.min(23, now().getHours() + 1))}:00` : '09:00';
+  W.step = n; W.max = Math.max(W.max, n); W.dupOk = false;
+  renderWizard(true);
 }
-function sumHTML(i) {
-  const [k, v] = [['무엇을', esc(W.d.title)], ['날짜', W.d.date && fmtDate(W.d.date)], ['시간', W.d.time && fmtTime(W.d.time)], ['어디서', W.d.district && placeOf(W.d)]][i - 1];
-  return `<button class="sum" data-act="go" data-n="${i}" aria-label="${k}: ${v}. 눌러서 수정"><span class="k">${k}</span><span class="v">${v}</span><span class="e">수정</span></button>`;
+// 수정하러 돌아갔다면 다음 미완료 단계, 없으면 원래 있던 단계로 복귀
+function advance() {
+  const s = W.step;
+  const n = W.max > s ? (Array.from({ length: W.max - s }, (_, i) => s + 1 + i).find(k => !valid(k)) ?? W.max) : s + 1;
+  go(n);
+}
+function sumHTML() {
+  const items = [[1, '무엇을', esc(W.d.title), ''], [2, '어디서', W.d.district && placeOf(W.d), I.pin], [3, '날짜', W.d.date && fmtShort(W.d.date), ''], [4, '시간', W.d.time && fmtTime(W.d.time), I.clock]]
+    .filter(([i]) => i < W.step);
+  return items.length ? `<div class="sumline" aria-label="입력한 내용, 눌러서 수정">${items.map(([i, k, v, ic]) =>
+    `<button class="sp" data-act="go" data-n="${i}" aria-label="${k}: ${v}, 수정">${ic}${v}</button>`).join('')}</div>` : '';
 }
 function renderWizard(anim) {
   $('#stepLbl').textContent = `${W.step}/5`;
   [...$('#prog').children].forEach((el, i) => el.classList.toggle('on', i < W.step));
-  $('#wscroll').innerHTML = [1, 2, 3, 4].filter(i => i < W.step).map(sumHTML).join('') +
-    `<section class="panel ${anim ? 'rise' : ''}" id="panel">${panelHTML()}</section>`;
+  $('#wscroll').innerHTML = sumHTML() + `<section class="panel ${anim ? 'rise' : ''}" id="panel">${panelHTML()}</section>`;
   afterPanel();
   updateBar();
-  if (anim) scrollBottom();
+  // 한 줄 요약과 새 질문이 함께 보이도록 맨 위로
+  if (anim) requestAnimationFrame(() => $('#wscroll').scrollTo({ top: 0, behavior: motion() }));
   if (W.step !== 1) $('#q')?.focus({ preventScroll: true });
 }
 function rerenderPanel() { $('#panel').innerHTML = panelHTML(); afterPanel(); updateBar(); }
-function scrollBottom() { requestAnimationFrame(() => { const w = $('#wscroll'); w.scrollTo({ top: w.scrollHeight, behavior: motion() }); }); }
 function updateBar() {
   $('#backBtn').hidden = W.step === 1;
-  $('#nextBtn').textContent = W.step === 5 ? '저장하고 날씨 받기' : '다음';
+  $('#nextBtn').textContent = W.step === 5 ? (W.dupOk ? '그래도 저장' : '저장하고 날씨 받기') : '다음';
   $('#nextBtn').disabled = !valid(W.step);
 }
-function panelHTML() { return [null, step1, step2, step3, step4, step5][W.step](); }
-function afterPanel() { ({ 1: after1, 3: after3, 5: after5 })[W.step]?.(); }
+function panelHTML() { W.fills = []; return [null, stepWhat, stepPlace, stepDate, stepTime, stepAlert][W.step](); }
+function afterPanel() { runFills(); ({ 1: afterWhat, 4: afterTime, 5: afterAlert })[W.step]?.(); }
+
+/* 캘린더·지역 타일용 예보: getForecast 결과를 캐시해서 같은 지점·시각은 한 번만 조회 */
+const peekCache = new Map();
+const peekTime = date => date === TODAY ? `${pad(Math.min(23, now().getHours() + 1))}:00` : '12:00';
+function peek(sido, district, date) {
+  const key = `${sido}|${district}|${date}|${peekTime(date)}`;
+  if (!peekCache.has(key)) {
+    peekCache.set(key, getForecast({ id: 0, title: '', date, time: peekTime(date), sido, district, alerts: [], sim: false })
+      .then(f => (peekCache.set(key, f), f)));
+  }
+  return key;
+}
+function slot(cls, sido, district, date, fill) {
+  const key = peek(sido, district, date);
+  W.fills.push([key, fill]);
+  return `<span class="${cls}" data-pk="${esc(key)}">${spin('xs')}</span>`;
+}
+function runFills() {
+  W.fills.forEach(([key, fill]) => Promise.resolve(peekCache.get(key)).then(f =>
+    document.querySelectorAll(`[data-pk="${key}"]`).forEach(el => fill(el, f))));
+}
 
 /* 1단계: 무엇을 */
-function step1() {
+function stepWhat() {
   return `<h3 id="q" tabindex="-1">무엇을 하나요?</h3>
-    <div class="search">${I.search}<input id="q1" type="search" placeholder="예: 캠핑, 자전거 라이딩" value="${esc(W.d.title)}" autocomplete="off" aria-label="할 일 검색" aria-controls="res"></div>
+    <div class="search">${I.search}<input id="q1" type="search" placeholder="할 일이나 장소로 검색" value="${esc(W.d.title)}" autocomplete="off" aria-label="할 일 검색" aria-controls="res"></div>
     <div id="resWrap"></div>`;
 }
-function pastTodos() {
+function myTodos() {
   const seen = new Set();
   return [...state.todos].sort((a, b) => b.id - a.id).filter(t => !seen.has(t.title) && seen.add(t.title))
-    .map(t => ({ title: t.title, sido: t.sido, district: t.district, kind: 'past' }));
+    .map(t => ({ title: t.title, sido: t.sido, district: t.district, date: t.date, time: t.time, kind: 'mine' }));
 }
 function hl(text, q) {
-  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  const i = q ? text.toLowerCase().indexOf(q.toLowerCase()) : -1;
   return i < 0 ? esc(text) : esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
 }
 function renderResults() {
-  const q = W.d.title.trim(), past = pastTodos();
+  const q = W.d.title.trim(), mine = myTodos(), ql = q.toLowerCase();
   let head, items, showNew = false;
-  if (!q) { head = '최근 할 일'; items = past.slice(0, 6); }
+  if (!q) { head = '내 할 일'; items = mine.slice(0, 6); }
   else {
-    const recs = RECS.filter(r => !past.some(p => p.title === r)).map(title => ({ title, kind: 'rec' }));
-    items = [...past, ...recs].filter(x => x.title.toLowerCase().includes(q.toLowerCase()));
+    const recs = RECS.filter(r => !mine.some(p => p.title === r)).map(title => ({ title, kind: 'rec' }));
+    // 제목뿐 아니라 장소로도 찾는다 (예: 속초)
+    items = [...mine, ...recs].filter(x => x.title.toLowerCase().includes(ql) || (x.sido && `${x.sido} ${x.district}`.includes(q)));
     showNew = !items.some(x => x.title === q);
     head = items.length ? '일치하는 항목' : '';
   }
   W.list = items;
   $('#resWrap').innerHTML = (head ? `<h4>${head}</h4>` : '') + `<ul class="res" id="res">
     ${showNew ? `<li><button class="opt new" data-act="new"><span class="oi">${I.plus}</span><span class="ot">‘${esc(q)}’ 새로 만들기</span></button></li>` : ''}
-    ${items.map((x, i) => `<li><button class="opt" data-act="pick" data-i="${i}"><span class="oi">${x.kind === 'past' ? I.clock : I.spark}</span>
-      <span class="ot">${q ? hl(x.title, q) : esc(x.title)}<small>${x.kind === 'past' ? '지난 할 일 · ' + x.sido + ' ' + x.district : '추천 활동'}</small></span></button></li>`).join('')}
+    ${items.map((x, i) => `<li><button class="opt" data-act="pick" data-i="${i}"><span class="oi">${x.kind === 'mine' ? I.clock : I.spark}</span>
+      <span class="ot">${hl(x.title, q)}<small>${x.kind === 'mine' ? `내 할 일 · ${fmtShort(x.date)} · ${hl(x.sido + ' ' + x.district, q)}` : '추천 활동'}</small></span></button></li>`).join('')}
   </ul>`;
 }
-function after1() {
+function afterWhat() {
   const inp = $('#q1');
   inp.addEventListener('input', () => { W.d.title = inp.value; renderResults(); updateBar(); });
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && valid(1)) { e.preventDefault(); W.d.title = W.d.title.trim(); go(2); } });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && valid(1)) { e.preventDefault(); W.d.title = W.d.title.trim(); advance(); } });
   renderResults();
   inp.focus({ preventScroll: true });
 }
 
-/* 2단계: 날짜 */
-function step2() {
-  const dow = parseD(TODAY).getDay();
-  const quick = [['오늘', TODAY], ['내일', addDays(TODAY, 1)], ['이번 주말', addDays(TODAY, (6 - dow + 7) % 7)], ['다음 주 월요일', addDays(TODAY, ((8 - dow) % 7) || 7)]];
+/* 2단계: 어디서 (날짜 전에 고른다: 캘린더가 이 장소의 예보를 보여줌) */
+function tileFill(el, f) {
+  const btn = el.closest('.tile');
+  if (!f.forecast_available) { el.textContent = '—'; btn.setAttribute('aria-label', `${btn.dataset.s}, 예보 없음`); return; }
+  const k = wxKind(f);
+  el.innerHTML = `${f.temp}°${['rain', 'thunder', 'snow'].includes(k) ? wxIcon(f) : ''}${isWind(f) ? I.wind : ''}`;
+  btn.setAttribute('aria-label', `${btn.dataset.s}, ${f.temp}도${isRain(f) ? ', 비 ' + f.pop + '%' : ''}${isWind(f) ? ', 강풍' : ''}`);
+}
+function stepPlace() {
+  const date = W.d.date || TODAY, recent = [...state.todos].sort((a, b) => b.id - a.id)[0];
+  const favs = [...FAV, recent && { label: `최근 · ${placeOf(recent)}`, icon: 'clock', sido: recent.sido, district: recent.district }].filter(Boolean);
+  const tiles = REGIONS.map(r => `<button class="tile ${W.d.sido === r.name ? 'on' : ''}" style="grid-row:${r.r};grid-column:${r.c}" data-act="sido" data-s="${r.name}"
+      aria-label="${r.name}" ${W.d.sido === r.name ? 'aria-pressed="true"' : ''}><b>${r.name}</b>${slot('tw', r.name, r.ds[0][0], date, tileFill)}</button>`).join('');
+  const reg = W.d.sido && regionOf(W.d.sido);
+  const when = date === TODAY ? `오늘 ${+peekTime(date).slice(0, 2)}시` : `${fmtShort(date)} 낮 12시`;
+  return `<h3 id="q" tabindex="-1">어디서 하나요?</h3>
+    <div class="chips">${favs.map(f => `<button class="chip ${W.d.sido === f.sido && W.d.district === f.district ? 'on' : ''}" data-act="place" data-s="${f.sido}" data-dd="${f.district}">${I[f.icon]}${esc(f.label)}</button>`).join('')}</div>
+    <h4>시·도 <span class="h4sub">${when} 기준 예보</span></h4>
+    <div class="map">${tiles}</div>
+    ${reg ? `<div class="rise" id="dist"><h4>${reg.name} 세부 지역</h4>
+      <div class="chips">${reg.ds.map(([d]) => `<button class="chip ${W.d.district === d ? 'on' : ''}" data-act="place" data-s="${reg.name}" data-dd="${d}">${d}</button>`).join('')}</div></div>` : ''}`;
+}
+
+/* 3단계: 날짜 */
+function dayFill(el, f) {
+  const btn = el.closest('.day');
+  if (!f.forecast_available) { el.innerHTML = ''; return; }
+  el.innerHTML = wxIcon(f);
+  btn.setAttribute('aria-label', `${btn.dataset.label}, ${COND[f.condition] || ''} ${f.temp}도${isRain(f) ? ', 강수 ' + f.pop + '%' : ''}`);
+}
+function dateChips() {
+  const dow = parseD(TODAY).getDay(), sat = (6 - dow + 7) % 7, sun = (7 - dow) % 7;
+  // 내일이 토요일이면 '이번 주말'은 일요일로 (칩 두 개가 같은 날이 되지 않게)
+  const weekend = sat > 1 ? ['이번 주말', sat] : sun > 1 ? ['이번 일요일', sun] : ['다음 주말', sat + 7];
+  return [['오늘', 0], ['내일', 1], weekend, ['다음 주 월요일', ((8 - dow) % 7) || 7]].map(([l, n]) => [l, addDays(TODAY, n)]);
+}
+function stepDate() {
   const base = parseD(W.d.date || TODAY);
   W.vm ??= { y: base.getFullYear(), m: base.getMonth() };
   const { y, m } = W.vm, first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
   const t0 = parseD(TODAY), atMin = y === t0.getFullYear() && m === t0.getMonth();
-  const region = W.d.sido || '서울';
   const busy = new Set(state.todos.map(t => t.date));
   let cells = Array(first.getDay()).fill('<span></span>').join('');
   for (let d = 1; d <= days; d++) {
     const s = `${y}-${pad(m + 1)}-${pad(d)}`, o = offset(s);
-    let icon = '', note = '';
-    if (o >= 0 && o <= 4) {
-      const b = mockBase(region, o), bad = isRain(b) || isWind(b);
-      icon = `<span>${wxIcon({ ...b, forecast_available: true })}</span>`;
-      note = `, ${region} ${bad ? (isRain(b) ? '비 예보' : '강풍 예보') : COND[b.condition]}`;
-    }
+    const label = `${fmtDate(s)}${busy.has(s) ? ', 할 일 있음' : ''}`;
     cells += `<button class="day ${s === TODAY ? 'today' : ''} ${s === W.d.date ? 'sel' : ''}" data-act="date" data-d="${s}" ${s < TODAY ? 'disabled' : ''}
-      aria-label="${fmtDate(s)}${note}${busy.has(s) ? ', 할 일 있음' : ''}" ${s === W.d.date ? 'aria-pressed="true"' : ''}>${d}${icon}${busy.has(s) ? '<span class="dot"></span>' : ''}</button>`;
+      data-label="${label}" aria-label="${label}" ${s === W.d.date ? 'aria-pressed="true"' : ''}>${d}${o >= 0 && o <= 4 ? slot('pk', W.d.sido, W.d.district, s, dayFill) : ''}${busy.has(s) ? '<span class="dot"></span>' : ''}</button>`;
   }
   return `<h3 id="q" tabindex="-1">언제 하나요?</h3>
-    <div class="chips">${quick.map(([l, s]) => `<button class="chip ${W.d.date === s ? 'on' : ''}" data-act="date" data-d="${s}">${l}</button>`).join('')}</div>
+    <div class="chips">${dateChips().map(([l, s]) => `<button class="chip ${W.d.date === s ? 'on' : ''}" data-act="date" data-d="${s}">${l}<small>${fmtShort(s)}</small></button>`).join('')}</div>
     <div class="cal-h">
       <button class="ibtn" data-act="cal" data-n="-1" aria-label="이전 달" ${atMin ? 'disabled' : ''}>${I.back}</button>
       <b aria-live="polite">${y}년 ${m + 1}월</b>
       <button class="ibtn" data-act="cal" data-n="1" aria-label="다음 달">${I.fwd}</button>
     </div>
     <div class="cal">${[...DOW].map(d => `<span class="dow" aria-hidden="true">${d}</span>`).join('')}${cells}</div>
-    <p class="hint">5일 이내 날짜엔 ${region} 예보가, 할 일이 있는 날엔 점이 표시돼요.</p>`;
+    <p class="hint">${placeOf(W.d)} 예보예요. 오늘은 ${+peekTime(TODAY).slice(0, 2)}시, 다른 날은 낮 12시 기준이고, 점은 할 일이 있는 날이에요.</p>`;
 }
 
-/* 3단계: 시간 */
+/* 4단계: 시간 */
 const ROW = 44;
 const WH = { ap: ['오전', '오후'], h: [...Array(12)].map((_, i) => String(i + 1)), m: ['00', '10', '20', '30', '40', '50'] };
 const WH_LABEL = { ap: '오전 오후', h: '시', m: '분' };
 const timeToIdx = t => { const [h, m] = t.split(':').map(Number); return { ap: h >= 12 ? 1 : 0, h: (h % 12 || 12) - 1, m: Math.min(5, Math.round(m / 10)) }; };
 const idxToTime = ix => `${pad(((ix.h + 1) % 12) + (ix.ap ? 12 : 0))}:${pad(ix.m * 10)}`;
 const QUICK_T = [['아침 9시', '09:00'], ['점심 12시', '12:00'], ['저녁 7시', '19:00']];
-function step3() {
+function stepTime() {
   return `<h3 id="q" tabindex="-1">몇 시에 하나요?</h3>
     <div class="tsum"><div class="d">${fmtDate(W.d.date)}</div><div class="t" id="tbig" aria-live="polite">${fmtTime(W.d.time)}</div></div>
-    <div class="chips" style="margin-top:14px" id="tchips">${QUICK_T.map(([l, t]) => `<button class="chip ${W.d.time === t ? 'on' : ''}" data-act="tchip" data-t="${t}">${l}</button>`).join('')}</div>
+    <p class="hint warn" id="tpast" role="alert" hidden>이미 지난 시간이에요. 다른 시간을 골라 주세요.</p>
+    <div class="chips" style="margin-top:14px" id="tchips">${QUICK_T.map(([l, t]) => `<button class="chip ${W.d.time === t ? 'on' : ''}" data-act="tchip" data-t="${t}" ${pastSlot(W.d.date, t) ? 'disabled' : ''}>${l}</button>`).join('')}</div>
     <div class="wheels">${Object.keys(WH).map(k => `<div class="wheel" data-w="${k}" role="listbox" aria-label="${WH_LABEL[k]}" tabindex="0">
       ${WH[k].map((v, i) => `<button role="option" data-act="witem" data-i="${i}" tabindex="-1">${v}</button>`).join('')}</div>`).join('')}</div>`;
 }
@@ -821,19 +888,29 @@ function readWheels() {
 function syncTime() {
   $('#tbig').textContent = fmtTime(W.d.time);
   document.querySelectorAll('#tchips .chip').forEach(c => c.classList.toggle('on', c.dataset.t === W.d.time));
+  $('#tpast').hidden = !pastSlot(W.d.date, W.d.time);
+  updateBar();
 }
+let wheelAuto = 0;   // 칩으로 휠을 굴리는 중에는 오전·오후 자동 전환을 하지 않음
 function setWheels(t, behavior) {
+  wheelAuto = Date.now() + 700;
   const ix = timeToIdx(t);
   document.querySelectorAll('.wheel').forEach(w => w.scrollTo({ top: ix[w.dataset.w] * ROW, behavior }));
 }
-function after3() {
-  const ix = timeToIdx(W.d.time);
+function afterTime() {
+  const ix = timeToIdx(W.d.time), ap = $('.wheel[data-w=ap]');
   document.querySelectorAll('.wheel').forEach(w => {
     const k = w.dataset.w, max = WH[k].length - 1;
     w.scrollTop = ix[k] * ROW; markWheel(w, ix[k]);
     w.addEventListener('scroll', () => {
       const i = Math.max(0, Math.min(max, Math.round(w.scrollTop / ROW)));
-      if (w._i !== i) { markWheel(w, i); readWheels(); }
+      if (w._i === i) return;
+      // 11시↔12시를 넘으면 오전·오후도 바뀐다 (오전 11시 → 오후 12시)
+      if (k === 'h' && Date.now() > wheelAuto && ((w._i === 10 && i === 11) || (w._i === 11 && i === 10))) {
+        markWheel(ap, 1 - ap._i);
+        ap.scrollTo({ top: ap._i * ROW, behavior: motion() });
+      }
+      markWheel(w, i); readWheels();
     }, { passive: true });
     w.addEventListener('keydown', e => {
       const d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
@@ -842,40 +919,17 @@ function after3() {
       w.scrollTo({ top: Math.max(0, Math.min(max, w._i + d)) * ROW, behavior: motion() });
     });
   });
-}
-
-/* 4단계: 어디서 */
-function step4() {
-  const o = offset(W.d.date), recent = [...state.todos].sort((a, b) => b.id - a.id)[0];
-  const favs = [...FAV, recent && { label: `최근 · ${placeOf(recent)}`, icon: 'clock', sido: recent.sido, district: recent.district }].filter(Boolean);
-  const tiles = REGIONS.map(r => {
-    let tw = '—', bad = false, note = '예보 공개 전';
-    if (o >= 0 && o <= 4) {
-      const b = mockBase(r.name, o);
-      bad = isRain(b) || isWind(b);
-      const k = wxKind({ ...b, forecast_available: true });
-      tw = `${b.temp}°${['rain', 'thunder', 'snow'].includes(k) ? wxIcon({ ...b, forecast_available: true }) : ''}${isWind(b) ? I.wind : ''}`;
-      note = `${b.temp}도${isRain(b) ? ', 비 ' + b.pop + '%' : ''}${isWind(b) ? ', 강풍' : ''}`;
-    }
-    return `<button class="tile ${bad ? 'bad' : ''} ${W.d.sido === r.name ? 'on' : ''}" style="grid-row:${r.r};grid-column:${r.c}" data-act="sido" data-s="${r.name}"
-      aria-label="${r.name}, ${note}" ${W.d.sido === r.name ? 'aria-pressed="true"' : ''}><b>${r.name}</b><span class="tw">${tw}</span></button>`;
-  }).join('');
-  const reg = W.d.sido && regionOf(W.d.sido);
-  return `<h3 id="q" tabindex="-1">어디서 하나요?</h3>
-    <div class="chips">${favs.map(f => `<button class="chip ${W.d.sido === f.sido && W.d.district === f.district ? 'on' : ''}" data-act="place" data-s="${f.sido}" data-dd="${f.district}">${I[f.icon]}${esc(f.label)}</button>`).join('')}</div>
-    <h4>시·도 (${fmtShort(W.d.date)} 날씨)</h4>
-    <div class="map">${tiles}</div>
-    ${reg ? `<div class="rise" id="dist"><h4>${reg.name} 세부 지역</h4>
-      <div class="chips">${reg.ds.map(([d]) => `<button class="chip ${W.d.district === d ? 'on' : ''}" data-act="place" data-s="${reg.name}" data-dd="${d}">${d}</button>`).join('')}</div></div>` : ''}`;
+  syncTime();
 }
 
 /* 5단계: 날씨 알림 */
-function step5() {
+function stepAlert() {
   return `<h3 id="q" tabindex="-1">어떤 날씨에 알려드릴까요?</h3>
     <div class="fcard" id="pv" aria-live="polite"><p class="loading" role="status" style="margin:0">${spin('lg')}예보 불러오는 중</p></div>
-    <h4>받을 날씨</h4>
+    <h4>받을 날씨 <span class="h4sub">하나 이상</span></h4>
     <div class="acards">${Object.entries(ALERTS).map(([k, a]) => `<label class="acard"><input type="checkbox" name="alert" value="${k}" ${W.d.alerts.includes(k) ? 'checked' : ''}>
       <span class="ac">${I[a.icon]}<b>${a.label}</b><small>${a.desc}</small></span></label>`).join('')}</div>
+    <p class="hint warn" id="ahint" role="alert" ${W.d.alerts.length ? 'hidden' : ''}>알림 받을 날씨를 하나 이상 골라 주세요.</p>
     <h4>알림 시점</h4>
     <div class="seg" role="radiogroup" aria-label="알림 시점">${Object.entries(TIMING).map(([k, l]) => `<label><input type="radio" name="timing" value="${k}" ${W.d.timing === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
 }
@@ -886,10 +940,10 @@ async function loadPreview() {
   const el = $('#pv');
   if (tok !== pvTok || !el) return;
   el.className = `fcard t-${tone(f)}`;
-  el.innerHTML = `<div class="fh">${fmtShort(W.d.date)} ${fmtTime(W.d.time)} · ${placeOf(W.d)}</div>` +
+  el.innerHTML = `<div class="fh">${fmtShort(W.d.date)} ${fmtTime(W.d.time)} · ${placeOf(W.d)} 예보</div>` +
     (f.forecast_available ? wxBlock(f) + reasonLine(f) : `<p class="waitmsg">${I.clock}아직 예보가 공개되지 않았어요. 5일 전부터 확인해 드려요.</p>`);
 }
-function after5() { loadPreview(); }
+function afterAlert() { loadPreview(); }
 
 function save() {
   const t = mkTodo(W.d.title.trim(), W.d.date, W.d.time, W.d.sido, W.d.district, [...W.d.alerts], { timing: W.d.timing });
@@ -899,6 +953,7 @@ function save() {
   const row = document.querySelector(`.row[data-id="${t.id}"]`);
   row?.scrollIntoView({ block: 'center', behavior: motion() });
   row?.classList.add('flash');
+  notice(`‘${t.title}’ 저장했어요`, true);
   refresh(t);
 }
 
@@ -932,24 +987,30 @@ document.addEventListener('click', e => {
     case 'next':
       if (!valid(W.step)) break;
       if (W.step === 1) W.d.title = W.d.title.trim();
-      W.step === 5 ? save() : go(W.step + 1);
+      if (W.step < 5) { advance(); break; }
+      if (!W.dupOk && state.todos.some(t => !t.done && t.title === W.d.title && t.date === W.d.date)) {
+        W.dupOk = true; updateBar();
+        notice('같은 날 같은 할 일이 이미 있어요. 한 번 더 누르면 저장해요');
+        break;
+      }
+      save();
       break;
-    case 'go': go(+el.dataset.n); break;
+    case 'go': W.step = +el.dataset.n; renderWizard(true); break;   // 수정: 끝나면 advance()가 원래 단계로 복귀
     case 'pick': {
       const x = W.list[+el.dataset.i];
       W.d.title = x.title;
-      if (x.kind === 'past') { W.d.sido = x.sido; W.d.district = x.district; }   // 지난 장소 미리 채움
-      go(2); break;
+      if (x.kind === 'mine') Object.assign(W.d, { sido: x.sido, district: x.district, time: x.time });   // 그때 장소·시간 미리 채움
+      advance(); break;
     }
-    case 'new': W.d.title = W.d.title.trim(); go(2); break;
-    case 'date': W.d.date = el.dataset.d; W.vm = null; go(3); break;
+    case 'new': W.d.title = W.d.title.trim(); advance(); break;
+    case 'date': W.d.date = el.dataset.d; W.vm = null; advance(); break;
     case 'cal': { const d = new Date(W.vm.y, W.vm.m + +el.dataset.n, 1); W.vm = { y: d.getFullYear(), m: d.getMonth() }; rerenderPanel(); break; }
     case 'tchip': W.d.time = el.dataset.t; syncTime(); setWheels(W.d.time, motion()); break;
     case 'witem': el.parentElement.scrollTo({ top: +el.dataset.i * ROW, behavior: motion() }); break;
     case 'sido':
       if (W.d.sido !== el.dataset.s) { W.d.sido = el.dataset.s; W.d.district = null; }
-      rerenderPanel(); scrollBottom(); break;
-    case 'place': W.d.sido = el.dataset.s; W.d.district = el.dataset.dd; go(5); break;
+      rerenderPanel(); $('#dist')?.scrollIntoView({ block: 'nearest', behavior: motion() }); break;
+    case 'place': W.d.sido = el.dataset.s; W.d.district = el.dataset.dd; advance(); break;
   }
 });
 
@@ -962,7 +1023,8 @@ document.addEventListener('change', e => {
     document.querySelector(`[data-done="${t.id}"]`)?.focus();
   } else if (el.name === 'alert') {
     W.d.alerts = [...document.querySelectorAll('input[name=alert]:checked')].map(i => i.value);
-    clearTimeout(pvTimer); pvTimer = setTimeout(loadPreview, 250);
+    $('#ahint').hidden = W.d.alerts.length > 0; updateBar();
+    if (W.d.alerts.length) { clearTimeout(pvTimer); pvTimer = setTimeout(loadPreview, 250); }
   } else if (el.name === 'timing') {
     W.d.timing = el.value;
   }
