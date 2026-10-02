@@ -81,8 +81,11 @@ svg{display:block;flex:none}
 .waitmsg{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--sub)}
 .waitmsg svg{width:18px;height:18px}
 
-.group h3{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--sub);margin:22px 4px 8px}
-.group h3 .n{font-size:12px;padding:0 7px;border-radius:9px;background:#E3E7EC;line-height:18px}
+.group{margin-top:22px}
+/* 섹션 제목: 크게 + 스크롤 시 상단 고정 */
+.group h3{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;margin:0 -16px 6px;padding:12px 20px 8px;background:var(--bg);font-size:17px;font-weight:700;color:var(--ink)}
+.group h3 .n{font-size:12px;font-weight:600;padding:0 7px;border-radius:9px;background:#E3E7EC;color:var(--sub);line-height:18px}
+.group h3 .range{margin-left:auto;font-size:13px;font-weight:500;color:var(--sub)}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .row{display:flex;align-items:center;gap:6px;background:#fff;border-radius:16px;padding:8px 10px 8px 2px;border:1.5px solid transparent;min-height:66px}
 .row.bad{background:var(--warn-bg);border-color:var(--warn-line)}
@@ -593,6 +596,11 @@ function groupOf(t) {
   if (o <= 4) return 'upcoming';
   return 'later';
 }
+function groupRange(k) {
+  const toSun = Math.max(1, (7 - parseD(TODAY).getDay()) % 7), d = n => fmtShort(addDays(TODAY, n));
+  const span = (a, b) => a === b ? d(a) : `${d(a)} – ${d(b)}`;
+  return { today: fmtDate(TODAY), soon: span(1, toSun), upcoming: toSun < 4 ? span(toSun + 1, 4) : '', later: `${d(5)} 이후` }[k];
+}
 const GROUPS = [['today', '오늘'], ['soon', '내일·주말'], ['upcoming', '다가오는 할 일'], ['later', '예보 공개 전']];
 
 function leftText(t) {
@@ -643,7 +651,7 @@ function renderMain() {
   const groups = GROUPS.map(([k, label]) => {
     const items = list.filter(t => groupOf(t) === k);
     if (!items.length) return '';
-    return `<section class="group" aria-label="${label} ${items.length}개"><h3><span>${label}</span><span class="n" aria-hidden="true">${items.length}</span></h3>
+    return `<section class="group" aria-label="${label} ${items.length}개"><h3><span>${label}</span><span class="n" aria-hidden="true">${items.length}</span><span class="range">${groupRange(k)}</span></h3>
       <ul class="list">${items.map(t => rowHTML(t, nextId)).join('')}</ul></section>`;
   }).join('');
   $('#mainScroll').innerHTML = nextHTML() + (groups || '<p class="empty">할 일이 없어요. + 버튼으로 추가해 보세요.</p>') +
