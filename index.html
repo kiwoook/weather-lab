@@ -9,9 +9,13 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F3F5F7; --card:#fff; --ink:#18212B; --sub:#5B6673; --mute:#8A94A0; --line:#E2E6EB;
+  --bg:#F3F5F7; --card:#fff; --ink:#18212B; --sub:#5B6673; --mute:#636E7B; --line:#E2E6EB;
   --pt:#1D5FD1; --pt-soft:#E6EEFB; --warn:#B71C1C; --warn-bg:#FAD2D2; --warn-line:#EE9A9A;
   --sun:#FFF3D6; --cloud:#EEF2F6; --dark:#1B2430;
+  /* 날씨 색: 아이콘(c-) / 배경(bg-) / 글자(tx-) */
+  --c-sun:#F59E0B; --c-cloud:#8796A8; --c-drop:#1E88E5; --c-bolt:#FFC107; --c-bolt-line:#C98A00; --c-wind:#0E9AA7; --c-snow:#4BA3E3; --c-temp:#E2553A;
+  --bg-rain:#E1F1FB; --bg-thunder:#FFF4C7; --bg-wind:#DDF4F5; --bg-snow:#EAF5FD;
+  --tx-clear:#9A5B00; --tx-rain:#0B65A0; --tx-thunder:#8A5A00; --tx-wind:#0B7480; --tx-snow:#2F7DBF;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -31,23 +35,29 @@ svg{display:block;flex:none}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column}
 
 /* ---------- 메인 ---------- */
-.top{display:flex;align-items:center;gap:2px;padding:18px 10px 6px 20px}
+.top{display:flex;align-items:center;gap:2px;padding:18px 10px 8px 20px;background:var(--bg);position:relative;z-index:2;transition:box-shadow .2s}
+.top.scrolled{box-shadow:0 1px 0 var(--line),0 8px 14px -10px rgba(20,30,45,.25)}
 .top .ttl{flex:1;min-width:0}
-.top .date{font-size:13px;color:var(--sub)}
+.top .date{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub)}
 .top h1{font-size:22px;margin:2px 0 0;font-weight:700;letter-spacing:-.3px}
 .ibtn{width:44px;height:44px;border:0;background:transparent;border-radius:14px;display:grid;place-items:center;position:relative}
 .ibtn:hover{background:rgba(24,33,43,.05)}
 .ibtn svg{width:24px;height:24px}
 .count{position:absolute;top:5px;right:4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
-.scroll{flex:1;overflow-y:auto;padding:6px 16px 120px;-webkit-overflow-scrolling:touch}
+.scroll{flex:1;overflow-y:auto;padding:6px 16px calc(108px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
 
 .next{border-radius:22px;padding:18px;background:var(--card);margin:4px 0 8px;border:1.5px solid transparent}
-.next.t-clear{background:var(--sun)} .next.t-cloud{background:var(--cloud)} .next.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
+.c-sun{stroke:var(--c-sun)} .c-cloud{stroke:var(--c-cloud)} .c-drop{stroke:var(--c-drop)} .c-wind{stroke:var(--c-wind)} .c-snow{stroke:var(--c-snow)} .c-temp{stroke:var(--c-temp)}
+.c-bolt{fill:var(--c-bolt);stroke:var(--c-bolt-line);stroke-width:1.2}
+.t-clear{--tbg:var(--sun)} .t-cloud{--tbg:var(--cloud)} .t-rain{--tbg:var(--bg-rain)} .t-thunder{--tbg:var(--bg-thunder)} .t-wind{--tbg:var(--bg-wind)} .t-snow{--tbg:var(--bg-snow)}
+.k-clear{--ktx:var(--tx-clear)} .k-cloud{--ktx:var(--sub)} .k-rain{--ktx:var(--tx-rain)} .k-thunder{--ktx:var(--tx-thunder)} .k-wind{--ktx:var(--tx-wind)} .k-snow{--ktx:var(--tx-snow)}
+.next,.fcard{background:var(--tbg,var(--card))}
+.next.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
 .next.t-wait{background:var(--card);border:1.5px dashed #C5CDD6}
-.next .lbl{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--sub)}
-.next .lbl .left{margin-left:auto;color:var(--pt);font-weight:700}
+.next .lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--sub)}
+.next .lbl .left{margin-left:auto;color:var(--ink);font-weight:700}
 .next.t-bad .lbl .left{color:var(--warn)}
-.next h2{font-size:21px;margin:6px 0 4px;letter-spacing:-.3px}
+.next h2{font-size:22px;margin:6px 0 4px;letter-spacing:-.3px}
 .meta{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);flex-wrap:wrap}
 .meta svg{width:14px;height:14px}
 .wx{display:flex;align-items:center;gap:12px;margin-top:14px}
@@ -57,17 +67,22 @@ svg{display:block;flex:none}
 .wx dl{margin:0 0 0 auto;display:grid;gap:4px;font-size:13px}
 .wx dl div{display:flex;gap:8px;justify-content:flex-end}
 .wx dt{color:var(--sub)} .wx dd{margin:0;font-weight:600;min-width:52px;text-align:right}
-.t-bad .wx .wxi,.t-bad .reason{color:var(--warn)}
-.rainy .wx .wxi{color:var(--pt)}
-.reason{display:flex;align-items:flex-start;gap:6px;margin:12px 0 0;font-size:13.5px;font-weight:600;line-height:1.45}
+.t-bad .reason{color:var(--warn)}
+.wx .cond{color:var(--ktx,var(--sub));font-weight:600}
+.reason{display:flex;align-items:flex-start;gap:6px;margin:12px 0 0;font-size:13px;font-weight:600;line-height:1.45}
 .reason svg{width:16px;height:16px;margin-top:2px}
-.achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.achip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:10px;background:rgba(255,255,255,.75);color:var(--sub)}
+.achips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(24,33,43,.1)}
+.al-lbl{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--sub);margin-right:2px}
+.al-lbl svg{width:14px;height:14px}
+.achip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:3px 9px;border-radius:10px;border:1px solid rgba(24,33,43,.14);color:var(--sub)}
 .achip svg{width:13px;height:13px}
-.waitmsg{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13.5px;color:var(--sub)}
+.achip [class^=c-]{stroke:currentColor} .achip .c-bolt{fill:currentColor}
+.achip.hit{background:#fff;border-color:var(--warn-line);color:var(--warn);font-weight:600}
+.waitmsg{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--sub)}
 .waitmsg svg{width:18px;height:18px}
 
-.group h3{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--sub);margin:22px 4px 8px}
+.group h3{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--sub);margin:22px 4px 8px}
+.group h3 .n{font-size:12px;padding:0 7px;border-radius:9px;background:#E3E7EC;line-height:18px}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .row{display:flex;align-items:center;gap:6px;background:#fff;border-radius:16px;padding:8px 10px 8px 2px;border:1.5px solid transparent;min-height:66px}
 .row.bad{background:var(--warn-bg);border-color:var(--warn-line)}
@@ -78,31 +93,39 @@ svg{display:block;flex:none}
 .cb{appearance:none;-webkit-appearance:none;margin:0;width:22px;height:22px;border-radius:7px;border:1.8px solid #AEB7C2;background:#fff center/14px no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s}
 .cb:checked{background-color:var(--pt);border-color:var(--pt);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E")}
 .rb{flex:1;min-width:0}
-.rt{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row.done .rt{text-decoration:line-through;color:var(--mute)}
-.row.done .rm,.row.done .ra{opacity:.6}
-.rm{font-size:12.5px;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ra{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--pt);margin-top:3px}
+.rtl{display:flex;align-items:center;gap:6px;min-width:0}
+.rt{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{flex:none;font-size:12px;font-weight:600;padding:1px 7px;border-radius:8px;background:var(--ink);color:#fff}
+.row.done .rt{text-decoration:line-through;color:var(--sub);font-weight:500}
+.row.past .rt{color:var(--sub)}
+.rm{font-size:13px;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ra{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:500;color:var(--sub);margin-top:3px}
 .ra svg{width:13px;height:13px}
-.row.bad .ra{color:var(--warn)}
+.row.bad .ra{color:var(--warn);font-weight:600}
+.t-bad,.row.bad{--sub:#4B5563}   /* 빨간 배경 위 보조 글씨 대비 4.5:1 이상 */
 .wb{display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border-radius:12px;background:var(--cloud);font-size:13px;font-weight:600;white-space:nowrap;flex:none}
 .wb svg{width:18px;height:18px}
-.wb.clear{background:var(--sun)}
-.wb.bad{background:#fff;color:var(--warn)}
-.wb.rain{color:var(--pt)}
-.wb.wait{background:#fff;color:var(--mute);border:1px dashed #C5CDD6;font-weight:500}
-.wb.load{background:transparent;color:var(--mute)}
+.wb{background:var(--tbg,var(--cloud));color:var(--ktx,var(--ink))}
+.wb.t-bad{background:#fff}
+.wb.wait{background:#fff;color:var(--sub);border:1px dashed #C5CDD6;font-weight:500}
+.wb.gray{background:var(--bg);color:var(--sub);font-weight:500}
+.wb small{font-size:12px;font-weight:500;opacity:.85}
+.wb.load{background:transparent;padding:6px 12px}
+.spin{display:inline-block;width:20px;height:20px;border-radius:50%;border:2.5px solid #D6DEE8;border-top-color:var(--pt);animation:spin .8s linear infinite;flex:none}
+.spin.lg{width:34px;height:34px;border-width:3px}
+.loading{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:13px;color:var(--sub)}
+@keyframes spin{to{transform:rotate(360deg)}}
 .empty{font-size:13px;color:var(--mute);padding:14px 4px}
 
 .demo{margin-top:28px;padding:14px;border-radius:16px;background:#fff;border:1px dashed #C5CDD6}
-.demo p{margin:0 0 10px;font-size:12.5px;color:var(--sub);line-height:1.5}
+.demo p{margin:0 0 10px;font-size:13px;color:var(--sub);line-height:1.5}
 .demo button{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--warn);font-weight:600}
 
-.fab{position:absolute;right:18px;bottom:26px;width:60px;height:60px;border-radius:30px;border:0;background:var(--pt);color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(29,95,209,.35);z-index:5}
+.fab{position:absolute;right:18px;bottom:calc(24px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:30px;border:0;background:var(--pt);color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(29,95,209,.35);z-index:5}
 .fab svg{width:28px;height:28px}
-.src{position:absolute;left:16px;bottom:30px;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:14px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--sub);z-index:5}
-.src i{width:8px;height:8px;border-radius:50%;background:var(--mute)}
-.src.dify i{background:var(--pt)} .src.dify{color:var(--pt)}
+.src{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--sub)}
+.src i{width:6px;height:6px;border-radius:50%;background:var(--mute)}
+.src.dify i{background:#1F9D55}
 
 /* ---------- 상단 알림 ---------- */
 .topstack{position:absolute;top:10px;left:10px;right:10px;z-index:50;display:flex;flex-direction:column;gap:8px;pointer-events:none}
@@ -111,10 +134,10 @@ svg{display:block;flex:none}
 .banner .bmain{flex:1;display:flex;gap:10px;align-items:flex-start;text-align:left;border:0;background:none;color:inherit;padding:14px 4px 14px 14px;min-width:0}
 .banner .bmain svg{width:22px;height:22px;color:#FF9C9C;margin-top:1px}
 .banner b{display:block;font-size:13px;color:#FF9C9C;margin-bottom:2px}
-.banner span{font-size:13.5px;line-height:1.45}
+.banner span{font-size:13px;line-height:1.45}
 .banner .ibtn{color:#fff;align-self:flex-start;margin:4px}
 .banner .ibtn:hover{background:rgba(255,255,255,.1)}
-.notice{background:#fff;color:var(--ink);border:1px solid var(--warn-line);border-left:4px solid var(--warn);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.08);animation:drop .3s ease}
+.notice{background:#fff;color:var(--ink);border:1px solid var(--warn-line);border-left:4px solid var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.08);animation:drop .3s ease}
 .notice.info{border-color:var(--line);border-left-color:var(--pt)}
 @keyframes drop{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
 
@@ -123,14 +146,14 @@ svg{display:block;flex:none}
 .scrim{position:absolute;inset:0;background:rgba(15,22,30,.4);border:0;animation:fade .2s}
 .sheet-p{position:relative;background:var(--bg);border-radius:24px 24px 0 0;max-height:78%;display:flex;flex-direction:column;animation:up .3s cubic-bezier(.2,.8,.2,1)}
 .sheet-h{display:flex;align-items:center;gap:4px;padding:14px 8px 8px 20px}
-.sheet-h h2{flex:1;margin:0;font-size:18px}
+.sheet-h h2{flex:1;margin:0;font-size:17px}
 .txtbtn{min-height:44px;padding:0 12px;border:0;background:none;color:var(--pt);font-weight:600;border-radius:12px}
 .txtbtn:disabled{color:var(--mute);cursor:default}
 .nlist{list-style:none;margin:0;padding:4px 16px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .nitem{width:100%;display:flex;gap:10px;text-align:left;background:#fff;border:0;border-radius:16px;padding:14px}
 .nitem .dot{width:8px;height:8px;border-radius:50%;background:transparent;margin-top:7px;flex:none}
 .nitem.unread .dot{background:var(--warn)}
-.nitem b{font-size:14px;display:block}
+.nitem b{font-size:15px;display:block}
 .nitem p{margin:4px 0 6px;font-size:13px;line-height:1.5;color:var(--ink)}
 .nitem small{font-size:12px;color:var(--mute)}
 .nitem:not(.unread) b,.nitem:not(.unread) p{color:var(--sub)}
@@ -147,10 +170,10 @@ svg{display:block;flex:none}
 .wscroll{flex:1;overflow-y:auto;padding:8px 16px 28px}
 .sum{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 14px;border:0;background:#fff;border-radius:14px;margin-bottom:6px;text-align:left}
 .sum .k{font-size:12px;color:var(--mute);width:48px;flex:none}
-.sum .v{flex:1;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum .v{flex:1;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sum .e{font-size:12px;color:var(--pt);font-weight:600}
 .panel{background:#fff;border-radius:22px;padding:20px 16px 18px;margin-top:10px}
-.panel h3{font-size:20px;margin:0 0 14px;letter-spacing:-.3px;outline:none}
+.panel h3{font-size:22px;margin:0 0 14px;letter-spacing:-.3px;outline:none}
 .panel h4{font-size:13px;color:var(--sub);margin:18px 0 8px;font-weight:600}
 .rise{animation:rise .4s cubic-bezier(.2,.8,.2,1) both}
 @keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
@@ -176,7 +199,7 @@ svg{display:block;flex:none}
 mark{background:none;color:var(--pt);font-weight:700}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-weight:500;font-size:14.5px;display:inline-flex;align-items:center;gap:6px}
+.chip{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-weight:500;font-size:15px;display:inline-flex;align-items:center;gap:6px}
 .chip svg{width:16px;height:16px;color:var(--sub)}
 .chip.on{background:var(--pt);color:#fff;border-color:var(--pt)}
 .chip.on svg{color:#fff}
@@ -187,20 +210,18 @@ mark{background:none;color:var(--pt);font-weight:700}
 .cal-h .ibtn:disabled{color:#C3CAD2;cursor:default;background:none}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal .dow{font-size:12px;color:var(--mute);text-align:center;padding:4px 0 6px}
-.day{height:54px;border:0;background:transparent;border-radius:14px;display:flex;flex-direction:column;align-items:center;padding-top:7px;gap:3px;position:relative;font-weight:500;font-size:15px}
+.day{height:58px;border:0;background:transparent;border-radius:14px;display:flex;flex-direction:column;align-items:center;padding-top:7px;gap:3px;position:relative;font-weight:500;font-size:15px}
 .day:not(:disabled):hover{background:var(--bg)}
 .day:disabled{color:#C3CAD2;cursor:default}
 .day.today{box-shadow:inset 0 0 0 1.5px var(--pt)}
 .day.sel,.day.sel:hover{background:var(--pt);color:#fff}
 .day svg{width:15px;height:15px;color:var(--mute)}
-.day .bad svg{color:var(--warn)}
-.day .rain svg{color:var(--pt)}
-.day.sel svg,.day.sel .bad svg{color:#fff}
+.day.sel svg [class^=c-]{stroke:#fff} .day.sel svg .c-bolt{fill:#fff}
 .day .dot{position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:var(--pt)}
 .day.sel .dot{background:#fff}
 
 .tsum{background:var(--pt-soft);border-radius:18px;padding:16px;text-align:center}
-.tsum .d{color:var(--sub);font-size:14px;font-weight:500}
+.tsum .d{color:var(--sub);font-size:15px;font-weight:500}
 .tsum .t{font-size:34px;font-weight:700;color:var(--pt);letter-spacing:-.5px;margin-top:2px}
 .wheels{position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:220px;margin-top:16px}
 .wheels::before{content:'';position:absolute;left:0;right:0;top:88px;height:44px;background:var(--bg);border-radius:12px}
@@ -211,24 +232,23 @@ mark{background:none;color:var(--pt);font-weight:700}
 
 .map{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
 .tile{min-height:62px;border-radius:14px;border:1.5px solid transparent;background:var(--bg);padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-.tile b{font-size:14px}
+.tile b{font-size:15px}
 .tile .tw{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub);font-weight:500}
 .tile .tw svg{width:14px;height:14px}
 .tile.bad{background:var(--warn-bg)}
 .tile.bad .tw{color:var(--warn)}
-.tile .tw .rain{color:var(--pt)}
 .tile.on{border-color:var(--pt);background:var(--pt-soft)}
 .tile.on b{color:var(--pt)}
-.hint{font-size:12.5px;color:var(--sub);margin:10px 2px 0}
+.hint{font-size:13px;color:var(--sub);margin:10px 2px 0}
 
-.fcard{border-radius:18px;padding:16px;background:var(--cloud);border:1.5px solid transparent;min-height:96px}
-.fcard.t-clear{background:var(--sun)} .fcard.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
+.fcard{border-radius:18px;padding:16px;border:1.5px solid transparent;min-height:96px}
+.fcard.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
 .fcard.t-wait{background:#fff;border:1.5px dashed #C5CDD6}
 .fcard .fh{font-size:13px;font-weight:600;color:var(--sub)}
 .fcard .wx{margin-top:10px}
 .fcard .wx .wxi svg{width:40px;height:40px}
 .fcard .wx .tmp{font-size:32px}
-.muted{color:var(--mute);font-size:13.5px;margin:0}
+.muted{color:var(--mute);font-size:13px;margin:0}
 .acards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .acard{position:relative;display:block}
 .acard input,.seg input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer}
@@ -241,13 +261,14 @@ mark{background:none;color:var(--pt);font-weight:700}
 .acard input:focus-visible + .ac,.seg input:focus-visible + span{outline:2px solid var(--pt);outline-offset:2px}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg);border-radius:14px;padding:4px;gap:4px}
 .seg label{position:relative}
-.seg span{display:grid;place-items:center;min-height:44px;border-radius:11px;font-size:14px;font-weight:500;color:var(--sub)}
+.seg span{display:grid;place-items:center;min-height:44px;border-radius:11px;font-size:15px;font-weight:500;color:var(--sub)}
 .seg input:checked + span{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 
 /* ---------- 설정 ---------- */
 
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .spin{animation:spin 1.6s linear infinite!important}   /* 로딩 표시는 느리게라도 돈다 */
 }
 </style>
 </head>
@@ -258,13 +279,12 @@ mark{background:none;color:var(--pt);font-weight:700}
   <section class="screen" id="main" aria-label="할 일 목록">
     <header class="top">
       <div class="ttl">
-        <div class="date" id="todayLbl"></div>
+        <div class="date"><span id="todayLbl"></span><span class="src" id="srcBadge"><i></i><span>mock</span></span></div>
         <h1>날씨 투두</h1>
       </div>
       <button class="ibtn" data-act="inbox" id="bellBtn" aria-label="알림함"></button>
     </header>
     <div class="scroll" id="mainScroll"></div>
-    <div class="src" id="srcBadge" aria-live="polite"><i></i><span>mock</span></div>
     <button class="fab" data-act="add" id="fab" aria-label="할 일 추가"></button>
   </section>
 
@@ -322,12 +342,13 @@ const motion = () => reduced.matches ? 'auto' : 'smooth';
 /* ===================== 아이콘 (선 스타일 SVG) ===================== */
 const sv = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const I = {
-  sun: sv('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M2.5 12h2M19.5 12h2M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'),
-  cloud: sv('<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.1 4.5 4.5 0 0 0 7 18z"/>'),
-  rain: sv('<path d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 5.1 4.5 4.5 0 0 0 7 14z"/><path d="M8.5 17.5l-1 2.5M12.5 17.5l-1 2.5M16.5 17.5l-1 2.5"/>'),
-  wind: sv('<path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5M3 16h7"/>'),
-  snow: sv('<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 6l2.5-1.5M9.5 19.5L12 18l2.5 1.5"/>'),
-  temp: sv('<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/>'),
+  sun: sv('<g class="c-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M2.5 12h2M19.5 12h2M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g>'),
+  cloud: sv('<path class="c-cloud" d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.1 4.5 4.5 0 0 0 7 18z"/>'),
+  rain: sv('<path class="c-cloud" d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 5.1 4.5 4.5 0 0 0 7 14z"/><path class="c-drop" d="M8.5 17.5l-1 2.5M12.5 17.5l-1 2.5M16.5 17.5l-1 2.5"/>'),
+  thunder: sv('<path class="c-cloud" d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 5.1 4.5 4.5 0 0 0 7 14z"/><path class="c-bolt" d="M13 11.5l-4 6h3l-1.2 5 4.7-6.5h-3.2z"/>'),
+  wind: sv('<path class="c-wind" d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5M3 16h7"/>'),
+  snow: sv('<path class="c-snow" d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 6l2.5-1.5M9.5 19.5L12 18l2.5 1.5"/>'),
+  temp: sv('<g class="c-temp"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/></g>'),
   bell: sv('<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>'),
   clock: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   pin: sv('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
@@ -373,10 +394,10 @@ const ALERTS = {
   temp: { label: '폭염·한파', desc: '33도 이상, 영하 10도 이하', icon: 'temp' },
 };
 // 판정 기준은 Dify 워크플로(weather-todo-workflow.yml)와 동일
-const isRain = f => f.pop >= 60 || f.condition === 'rain';
+const isRain = f => f.pop >= 60 || f.condition === 'rain' || f.condition === 'thunder';
 const isWind = f => f.wind >= 14;
 const TIMING = { day: '하루 전', h3: '3시간 전', both: '둘 다' };
-const COND = { clear: '맑음', cloudy: '흐림', rain: '비', snow: '눈', wind: '바람' };
+const COND = { clear: '맑음', cloudy: '흐림', rain: '비', thunder: '뇌우', snow: '눈', wind: '바람' };
 const RECS = ['캠핑', '자전거 라이딩', '등산', '한강 피크닉', '러닝', '골프 라운딩', '낚시', '서핑', '세차', '빨래 널기', '야외 촬영', '단풍 구경', '불꽃축제 구경'];
 
 /* ===================== 상태 ===================== */
@@ -410,6 +431,8 @@ const MOCK_OVERRIDE = {
   '강원|1': { condition: 'wind', pop: 30, wind: 16, temp: 15 },
   '경기|2': { condition: 'rain', pop: 80, wind: 6, temp: 16 },
   '서울|3': { condition: 'rain', pop: 70, wind: 5, temp: 17 },
+  '서울|2': { condition: 'thunder', pop: 65, wind: 8, temp: 19 },
+  '부산|1': { condition: 'thunder', pop: 70, wind: 9, temp: 22 },
 };
 function mockBase(sido, off) {
   const r = hash(sido + off), warm = sido === '제주' ? 4 : ['부산', '울산', '경남', '전남', '광주'].includes(sido) ? 2 : 0;
@@ -443,7 +466,7 @@ function mockForecast(t) {
 const bool = v => v === true || v === 'true' || v === 1 || v === '1';
 const num = v => v === null || v === undefined || v === '' ? null : Math.round(Number(v));
 // 워크플로는 sun/cloud/rain/snow/wind/pending 을 돌려준다
-const COND_MAP = { sun: 'clear', clear: 'clear', cloud: 'cloudy', clouds: 'cloudy', cloudy: 'cloudy', rain: 'rain', drizzle: 'rain', thunderstorm: 'rain', snow: 'snow', wind: 'wind' };
+const COND_MAP = { sun: 'clear', clear: 'clear', cloud: 'cloudy', clouds: 'cloudy', cloudy: 'cloudy', rain: 'rain', drizzle: 'rain', thunderstorm: 'thunder', thunder: 'thunder', snow: 'snow', wind: 'wind' };
 function normalize(o) {
   if (o.error) throw new Error(o.error);                                   // OWM 키 오류 등은 '예보 공개 전'이 아니라 실패로
   const available = o.forecast_available === undefined ? true : bool(o.forecast_available);
@@ -490,20 +513,25 @@ async function getForecast(t) {
 }
 
 /* ===================== 날씨 표현 ===================== */
-function wxIcon(f) {
-  if (!f || !f.forecast_available) return I.clock;
-  if (f.condition === 'snow') return I.snow;
-  if (isRain(f)) return I.rain;
-  if (f.wind >= 14 || f.condition === 'wind') return I.wind;
-  return f.condition === 'clear' ? I.sun : I.cloud;
+// 표시용 날씨 종류: 아이콘, 배경(t-), 글자색(k-)이 모두 이것을 따른다
+function wxKind(f) {
+  if (!f || !f.forecast_available) return 'wait';
+  if (f.condition === 'snow') return 'snow';
+  if (f.condition === 'thunder') return 'thunder';
+  if (isRain(f)) return 'rain';
+  if (isWind(f) || f.condition === 'wind') return 'wind';
+  return f.condition === 'clear' ? 'clear' : 'cloud';
 }
-const tone = f => !f || !f.forecast_available ? 'wait' : f.is_bad ? 'bad' : f.condition === 'clear' && f.pop < 60 ? 'clear' : 'cloud';
+const wxIcon = f => ({ wait: I.clock, snow: I.snow, thunder: I.thunder, rain: I.rain, wind: I.wind, clear: I.sun, cloud: I.cloud })[wxKind(f)];
+const tone = f => f?.is_bad ? 'bad' : wxKind(f);
 const alertText = a => a.length ? a.map(k => ALERTS[k].label).join('·') : '알림 없음';
 function wxBlock(f) {
-  return `<div class="wx"><span class="wxi">${wxIcon(f)}</span>
+  return `<div class="wx k-${wxKind(f)}"><span class="wxi">${wxIcon(f)}</span>
     <div><div class="tmp">${f.temp}°</div><div class="cond">${COND[f.condition] || ''}</div></div>
     <dl><div><dt>강수</dt><dd>${f.pop}%</dd></div><div><dt>바람</dt><dd>${f.wind}m/s</dd></div></dl></div>`;
 }
+// 다시 그려져도 회전이 끊기지 않게 현재 시각 기준 위상으로 시작
+const spin = (cls = '') => `<span class="spin ${cls}" style="animation-delay:-${Math.round(performance.now() % 800)}ms"></span>`;
 const reasonLine = f => f.is_bad ? `<p class="reason">${I.bell}<span>${esc(f.reasons.join(' · ') || '기상악화 예보')}</span></p>` : '';
 
 /* ===================== 알림 ===================== */
@@ -541,7 +569,9 @@ function notice(msg, info = false) {
 }
 
 /* ===================== 조회 ===================== */
+const isPast = t => whenOf(t) < now();
 async function refresh(t) {
+  if (isPast(t) && !t.sim) { t.fc = { ...UNAVAILABLE }; renderMain(); return t.fc; }   // 지난 일정은 조회하지 않음
   const f = await getForecast(t);
   t.fc = f;
   checkAlert(t);
@@ -552,6 +582,10 @@ const refreshAll = () => Promise.all(state.todos.map(refresh));
 
 /* ===================== 화면 1. 메인 ===================== */
 const sorted = () => [...state.todos].sort((a, b) => whenOf(a) - whenOf(b));
+const nextTodo = () => sorted().find(t => !t.done && !isPast(t));
+// 걸린 알림 조건 (판정 기준은 워크플로와 동일)
+const HIT = { rain: isRain, wind: isWind, snow: f => f.condition === 'snow', temp: f => f.temp >= 33 || f.temp <= -10 };
+const hit = (f, a) => !!(f?.forecast_available && f.is_bad && HIT[a](f));
 function groupOf(t) {
   const o = offset(t.date), toSun = (7 - parseD(TODAY).getDay()) % 7;
   if (o <= 0) return 'today';
@@ -568,17 +602,22 @@ function leftText(t) {
 }
 function badge(t) {
   const f = t.fc;
-  if (!f) return `<span class="wb load">불러오는 중</span>`;
+  if (!f) return `<span class="wb load" role="status">${spin()}<span class="sr">예보 불러오는 중</span></span>`;
+  if (isPast(t)) return `<span class="wb gray">${t.done ? '완료' : '지남'}</span>`;
   if (!f.forecast_available) return `<span class="wb wait">${I.clock}대기</span>`;
-  const txt = isRain(f) ? `비 ${f.pop}%` : isWind(f) ? `바람 ${f.wind}m/s` : `${f.temp}°`;
-  return `<span class="wb ${tone(f)} ${isRain(f) ? 'rain' : ''}">${wxIcon(f)}${txt}</span>`;
+  const k = wxKind(f);
+  // 비 알림을 건 일정은 기온과 강수확률을 함께
+  const txt = k === 'thunder' ? `뇌우 ${f.pop}%` : isRain(f) ? `비 ${f.pop}%` : isWind(f) ? `바람 ${f.wind}m/s`
+    : t.alerts.includes('rain') ? `${f.temp}°<small>· ${f.pop}%</small>` : `${f.temp}°`;
+  return `<span class="wb t-${tone(f)} k-${k}">${wxIcon(f)}${txt}</span>`;
 }
-function rowHTML(t) {
-  const f = t.fc, cls = [t.done && 'done', f?.is_bad && !t.done && 'bad', f && !f.forecast_available && 'pending'].filter(Boolean).join(' ');
+function rowHTML(t, nextId) {
+  const f = t.fc, past = isPast(t);
+  const cls = t.done ? 'done' : past ? 'past' : f?.is_bad ? 'bad' : f && !f.forecast_available ? 'pending' : '';
   return `<li class="row ${cls}" data-id="${t.id}">
     <label class="cbw"><input type="checkbox" class="cb" data-done="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료"></label>
     <div class="rb">
-      <div class="rt">${esc(t.title)}</div>
+      <div class="rtl"><span class="rt">${esc(t.title)}</span>${t.id === nextId ? '<span class="tag">다음</span>' : ''}</div>
       <div class="rm">${groupOf(t) === 'today' ? '' : fmtShort(t.date) + ' '}${fmtTime(t.time)} · ${placeOf(t)}</div>
       <div class="ra">${I.bell}${alertText(t.alerts)}</div>
     </div>
@@ -586,26 +625,26 @@ function rowHTML(t) {
   </li>`;
 }
 function nextHTML() {
-  const t = sorted().find(t => !t.done && whenOf(t) >= now());
+  const t = nextTodo();
   if (!t) return '';
   const f = t.fc, tn = f ? tone(f) : 'cloud';
-  return `<article class="next t-${tn} ${f?.forecast_available && isRain(f) ? 'rainy' : ''}" aria-label="다음 할 일">
+  return `<article class="next t-${tn}" aria-label="다음 할 일">
     <div class="lbl">다음 할 일 <span class="left">${leftText(t)}</span></div>
     <h2>${esc(t.title)}</h2>
     <div class="meta">${I.clock}${fmtShort(t.date)} ${fmtTime(t.time)} · ${I.pin}${placeOf(t)}</div>
-    ${!f ? '<p class="waitmsg">예보 불러오는 중…</p>'
+    ${!f ? `<p class="loading" role="status">${spin('lg')}예보 불러오는 중</p>`
       : !f.forecast_available ? `<p class="waitmsg">${I.clock}예보 공개 전이에요. 5일 전부터 확인해 드려요.</p>`
       : wxBlock(f) + reasonLine(f)}
-    <div class="achips">${t.alerts.map(a => `<span class="achip">${I[ALERTS[a].icon]}${ALERTS[a].label}</span>`).join('') || '<span class="achip">알림 없음</span>'}</div>
+    <div class="achips"><span class="al-lbl">${I.bell}알림 조건</span>${t.alerts.map(a => `<span class="achip ${hit(f, a) ? 'hit' : ''}">${I[ALERTS[a].icon]}${ALERTS[a].label}</span>`).join('') || '<span class="achip">없음</span>'}</div>
   </article>`;
 }
 function renderMain() {
-  const list = sorted();
+  const list = sorted().sort((a, b) => a.done - b.done), nextId = nextTodo()?.id;   // 완료는 그룹 맨 아래로
   const groups = GROUPS.map(([k, label]) => {
     const items = list.filter(t => groupOf(t) === k);
     if (!items.length) return '';
-    return `<section class="group" aria-label="${label}"><h3><span>${label}</span><span>${items.length}</span></h3>
-      <ul class="list">${items.map(rowHTML).join('')}</ul></section>`;
+    return `<section class="group" aria-label="${label} ${items.length}개"><h3><span>${label}</span><span class="n" aria-hidden="true">${items.length}</span></h3>
+      <ul class="list">${items.map(t => rowHTML(t, nextId)).join('')}</ul></section>`;
   }).join('');
   $('#mainScroll').innerHTML = nextHTML() + (groups || '<p class="empty">할 일이 없어요. + 버튼으로 추가해 보세요.</p>') +
     `<div class="demo"><p>데모: 다음 할 일의 예보가 비 90%·강풍 15m/s로 악화되는 상황을 재현해요. 고른 알림 조건에 해당할 때만 알림이 와요.</p>
@@ -733,7 +772,7 @@ function step2() {
     let icon = '', note = '';
     if (o >= 0 && o <= 4) {
       const b = mockBase(region, o), bad = isRain(b) || isWind(b);
-      icon = `<span class="${isRain(b) ? 'rain' : bad ? 'bad' : ''}">${wxIcon({ ...b, forecast_available: true })}</span>`;
+      icon = `<span>${wxIcon({ ...b, forecast_available: true })}</span>`;
       note = `, ${region} ${bad ? (isRain(b) ? '비 예보' : '강풍 예보') : COND[b.condition]}`;
     }
     cells += `<button class="day ${s === TODAY ? 'today' : ''} ${s === W.d.date ? 'sel' : ''}" data-act="date" data-d="${s}" ${s < TODAY ? 'disabled' : ''}
@@ -806,7 +845,8 @@ function step4() {
     if (o >= 0 && o <= 4) {
       const b = mockBase(r.name, o);
       bad = isRain(b) || isWind(b);
-      tw = `${b.temp}°${isRain(b) ? `<span class="rain">${I.rain}</span>` : ''}${isWind(b) ? I.wind : ''}`;
+      const k = wxKind({ ...b, forecast_available: true });
+      tw = `${b.temp}°${['rain', 'thunder', 'snow'].includes(k) ? wxIcon({ ...b, forecast_available: true }) : ''}${isWind(b) ? I.wind : ''}`;
       note = `${b.temp}도${isRain(b) ? ', 비 ' + b.pop + '%' : ''}${isWind(b) ? ', 강풍' : ''}`;
     }
     return `<button class="tile ${bad ? 'bad' : ''} ${W.d.sido === r.name ? 'on' : ''}" style="grid-row:${r.r};grid-column:${r.c}" data-act="sido" data-s="${r.name}"
@@ -824,7 +864,7 @@ function step4() {
 /* 5단계: 날씨 알림 */
 function step5() {
   return `<h3 id="q" tabindex="-1">어떤 날씨에 알려드릴까요?</h3>
-    <div class="fcard" id="pv" aria-live="polite"><p class="muted">예보 불러오는 중…</p></div>
+    <div class="fcard" id="pv" aria-live="polite"><p class="loading" role="status" style="margin:0">${spin('lg')}예보 불러오는 중</p></div>
     <h4>받을 날씨</h4>
     <div class="acards">${Object.entries(ALERTS).map(([k, a]) => `<label class="acard"><input type="checkbox" name="alert" value="${k}" ${W.d.alerts.includes(k) ? 'checked' : ''}>
       <span class="ac">${I[a.icon]}<b>${a.label}</b><small>${a.desc}</small></span></label>`).join('')}</div>
@@ -837,7 +877,7 @@ async function loadPreview() {
   const f = await getForecast({ ...W.d, id: 0, sim: false });
   const el = $('#pv');
   if (tok !== pvTok || !el) return;
-  el.className = `fcard t-${tone(f)} ${f.forecast_available && isRain(f) ? 'rainy' : ''}`;
+  el.className = `fcard t-${tone(f)}`;
   el.innerHTML = `<div class="fh">${fmtShort(W.d.date)} ${fmtTime(W.d.time)} · ${placeOf(W.d)}</div>` +
     (f.forecast_available ? wxBlock(f) + reasonLine(f) : `<p class="waitmsg">${I.clock}아직 예보가 공개되지 않았어요. 5일 전부터 확인해 드려요.</p>`);
 }
@@ -928,6 +968,7 @@ $('#closeInbox').innerHTML = I.x;
 $('#backBtn').innerHTML = I.back;
 $('#todayLbl').textContent = fmtDate(TODAY);
 renderSource();
+$('#mainScroll').addEventListener('scroll', e => $('.top').classList.toggle('scrolled', e.target.scrollTop > 2), { passive: true });
 renderMain();
 refreshAll();
 </script>
