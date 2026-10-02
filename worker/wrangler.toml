@@ -1,0 +1,10 @@
+name = "weather-todo-proxy"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+DIFY_URL = "https://api.dify.ai/v1"
+# 배포 페이지 + 로컬 테스트(python3 -m http.server 8000)
+ALLOWED_ORIGINS = "https://kiwoook.github.io,http://localhost:8000"
+
+# DIFY_KEY는 여기 쓰지 말고: npx wrangler secret put DIFY_KEY

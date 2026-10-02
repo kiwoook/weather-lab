@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>날씨 투두</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --card:#fff; --ink:#18212B; --sub:#5B6673; --mute:#8A94A0; --line:#E2E6EB;
+  --pt:#1D5FD1; --pt-soft:#E6EEFB; --warn:#B4410E; --warn-bg:#FDEBDD; --warn-line:#F2C3A2;
+  --sun:#FFF3D6; --cloud:#EEF2F6; --dark:#1B2430;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#DCE1E7;font-family:'IBM Plex Sans KR',system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pt);outline-offset:2px}
+svg{display:block;flex:none}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.app{position:relative;width:100%;max-width:390px;height:100dvh;margin:0 auto;background:var(--bg);overflow:hidden}
+@media (min-width:430px){
+  body{display:flex;align-items:center;justify-content:center;min-height:100%;padding:20px 0}
+  .app{height:844px;max-height:calc(100dvh - 40px);border-radius:36px;box-shadow:0 24px 60px rgba(20,30,45,.18)}
+}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+
+/* ---------- 메인 ---------- */
+.top{display:flex;align-items:center;gap:2px;padding:18px 10px 6px 20px}
+.top .ttl{flex:1;min-width:0}
+.top .date{font-size:13px;color:var(--sub)}
+.top h1{font-size:22px;margin:2px 0 0;font-weight:700;letter-spacing:-.3px}
+.ibtn{width:44px;height:44px;border:0;background:transparent;border-radius:14px;display:grid;place-items:center;position:relative}
+.ibtn:hover{background:rgba(24,33,43,.05)}
+.ibtn svg{width:24px;height:24px}
+.count{position:absolute;top:5px;right:4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
+.scroll{flex:1;overflow-y:auto;padding:6px 16px 120px;-webkit-overflow-scrolling:touch}
+
+.next{border-radius:22px;padding:18px;background:var(--card);margin:4px 0 8px;border:1.5px solid transparent}
+.next.t-clear{background:var(--sun)} .next.t-cloud{background:var(--cloud)} .next.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
+.next.t-wait{background:var(--card);border:1.5px dashed #C5CDD6}
+.next .lbl{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--sub)}
+.next .lbl .left{margin-left:auto;color:var(--pt);font-weight:700}
+.next.t-bad .lbl .left{color:var(--warn)}
+.next h2{font-size:21px;margin:6px 0 4px;letter-spacing:-.3px}
+.meta{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);flex-wrap:wrap}
+.meta svg{width:14px;height:14px}
+.wx{display:flex;align-items:center;gap:12px;margin-top:14px}
+.wx .wxi svg{width:46px;height:46px}
+.wx .tmp{font-size:38px;font-weight:600;line-height:1;letter-spacing:-1px}
+.wx .cond{font-size:13px;color:var(--sub);margin-top:4px}
+.wx dl{margin:0 0 0 auto;display:grid;gap:4px;font-size:13px}
+.wx dl div{display:flex;gap:8px;justify-content:flex-end}
+.wx dt{color:var(--sub)} .wx dd{margin:0;font-weight:600;min-width:52px;text-align:right}
+.t-bad .wx .wxi,.t-bad .reason{color:var(--warn)}
+.reason{display:flex;align-items:flex-start;gap:6px;margin:12px 0 0;font-size:13.5px;font-weight:600;line-height:1.45}
+.reason svg{width:16px;height:16px;margin-top:2px}
+.achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.achip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:10px;background:rgba(255,255,255,.75);color:var(--sub)}
+.achip svg{width:13px;height:13px}
+.waitmsg{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13.5px;color:var(--sub)}
+.waitmsg svg{width:18px;height:18px}
+
+.group h3{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--sub);margin:22px 4px 8px}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:6px;background:#fff;border-radius:16px;padding:8px 10px 8px 2px;border:1.5px solid transparent;min-height:66px}
+.row.bad{background:var(--warn-bg);border-color:var(--warn-line)}
+.row.pending{background:transparent;border:1.5px dashed #C5CDD6}
+.row.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--pt)}100%{box-shadow:0 0 0 0 transparent}}
+.cbw{width:44px;height:44px;display:grid;place-items:center;flex:none;cursor:pointer}
+.cb{appearance:none;-webkit-appearance:none;margin:0;width:22px;height:22px;border-radius:7px;border:1.8px solid #AEB7C2;background:#fff center/14px no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s}
+.cb:checked{background-color:var(--pt);border-color:var(--pt);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E")}
+.rb{flex:1;min-width:0}
+.rt{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.done .rt{text-decoration:line-through;color:var(--mute)}
+.row.done .rm,.row.done .ra{opacity:.6}
+.rm{font-size:12.5px;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ra{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--pt);margin-top:3px}
+.ra svg{width:13px;height:13px}
+.row.bad .ra{color:var(--warn)}
+.wb{display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border-radius:12px;background:var(--cloud);font-size:13px;font-weight:600;white-space:nowrap;flex:none}
+.wb svg{width:18px;height:18px}
+.wb.clear{background:var(--sun)}
+.wb.bad{background:#fff;color:var(--warn)}
+.wb.wait{background:#fff;color:var(--mute);border:1px dashed #C5CDD6;font-weight:500}
+.wb.load{background:transparent;color:var(--mute)}
+.empty{font-size:13px;color:var(--mute);padding:14px 4px}
+
+.demo{margin-top:28px;padding:14px;border-radius:16px;background:#fff;border:1px dashed #C5CDD6}
+.demo p{margin:0 0 10px;font-size:12.5px;color:var(--sub);line-height:1.5}
+.demo button{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--warn);font-weight:600}
+
+.fab{position:absolute;right:18px;bottom:26px;width:60px;height:60px;border-radius:30px;border:0;background:var(--pt);color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(29,95,209,.35);z-index:5}
+.fab svg{width:28px;height:28px}
+.src{position:absolute;left:16px;bottom:30px;display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:14px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--sub);z-index:5}
+.src i{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.src.dify i{background:var(--pt)} .src.dify{color:var(--pt)}
+
+/* ---------- 상단 알림 ---------- */
+.topstack{position:absolute;top:10px;left:10px;right:10px;z-index:50;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.topstack>*{pointer-events:auto}
+.banner{display:flex;align-items:stretch;background:var(--dark);color:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:drop .35s cubic-bezier(.2,.8,.2,1)}
+.banner .bmain{flex:1;display:flex;gap:10px;align-items:flex-start;text-align:left;border:0;background:none;color:inherit;padding:14px 4px 14px 14px;min-width:0}
+.banner .bmain svg{width:22px;height:22px;color:#FFB48A;margin-top:1px}
+.banner b{display:block;font-size:13px;color:#FFB48A;margin-bottom:2px}
+.banner span{font-size:13.5px;line-height:1.45}
+.banner .ibtn{color:#fff;align-self:flex-start;margin:4px}
+.banner .ibtn:hover{background:rgba(255,255,255,.1)}
+.notice{background:#fff;color:var(--ink);border:1px solid var(--warn-line);border-left:4px solid var(--warn);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.08);animation:drop .3s ease}
+.notice.info{border-color:var(--line);border-left-color:var(--pt)}
+@keyframes drop{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+
+/* ---------- 알림함 ---------- */
+.sheet{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end}
+.scrim{position:absolute;inset:0;background:rgba(15,22,30,.4);border:0;animation:fade .2s}
+.sheet-p{position:relative;background:var(--bg);border-radius:24px 24px 0 0;max-height:78%;display:flex;flex-direction:column;animation:up .3s cubic-bezier(.2,.8,.2,1)}
+.sheet-h{display:flex;align-items:center;gap:4px;padding:14px 8px 8px 20px}
+.sheet-h h2{flex:1;margin:0;font-size:18px}
+.txtbtn{min-height:44px;padding:0 12px;border:0;background:none;color:var(--pt);font-weight:600;border-radius:12px}
+.txtbtn:disabled{color:var(--mute);cursor:default}
+.nlist{list-style:none;margin:0;padding:4px 16px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.nitem{width:100%;display:flex;gap:10px;text-align:left;background:#fff;border:0;border-radius:16px;padding:14px}
+.nitem .dot{width:8px;height:8px;border-radius:50%;background:transparent;margin-top:7px;flex:none}
+.nitem.unread .dot{background:var(--warn)}
+.nitem b{font-size:14px;display:block}
+.nitem p{margin:4px 0 6px;font-size:13px;line-height:1.5;color:var(--ink)}
+.nitem small{font-size:12px;color:var(--mute)}
+.nitem:not(.unread) b,.nitem:not(.unread) p{color:var(--sub)}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(100%)}}
+
+/* ---------- 할 일 추가 ---------- */
+.atop{display:flex;align-items:center;padding:12px 10px 0}
+.atop h2{flex:1;text-align:center;font-size:17px;margin:0}
+.atop .stepl{width:44px;text-align:center;font-size:13px;font-weight:600;color:var(--sub)}
+.prog{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:10px 16px 6px}
+.prog i{height:4px;border-radius:2px;background:#D6DCE3;transition:background .25s}
+.prog i.on{background:var(--pt)}
+.wscroll{flex:1;overflow-y:auto;padding:8px 16px 28px}
+.sum{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 14px;border:0;background:#fff;border-radius:14px;margin-bottom:6px;text-align:left}
+.sum .k{font-size:12px;color:var(--mute);width:48px;flex:none}
+.sum .v{flex:1;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum .e{font-size:12px;color:var(--pt);font-weight:600}
+.panel{background:#fff;border-radius:22px;padding:20px 16px 18px;margin-top:10px}
+.panel h3{font-size:20px;margin:0 0 14px;letter-spacing:-.3px;outline:none}
+.panel h4{font-size:13px;color:var(--sub);margin:18px 0 8px;font-weight:600}
+.rise{animation:rise .4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+.bbar{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
+.bbar .back{width:52px;height:52px;border-radius:16px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;flex:none}
+.bbar .back svg{width:22px;height:22px}
+.bbar .nextb{flex:1;height:52px;border-radius:16px;border:0;background:var(--pt);color:#fff;font-weight:600;font-size:16px}
+.bbar .nextb:disabled{background:#B5C2D3;cursor:default}
+
+.search{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:14px;padding:0 14px;height:52px}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--pt)}
+.search svg{width:20px;height:20px;color:var(--sub)}
+.search input{flex:1;border:0;background:transparent;font-size:16px;outline:none;min-width:0;height:100%}
+.res{list-style:none;margin:6px 0 0;padding:0}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;border:0;background:transparent;padding:8px 4px;border-bottom:1px solid var(--line);text-align:left}
+.res li:last-child .opt{border-bottom:0}
+.opt .oi{width:32px;height:32px;border-radius:10px;background:var(--bg);display:grid;place-items:center;color:var(--sub);flex:none}
+.opt .oi svg{width:17px;height:17px}
+.opt .ot{flex:1;min-width:0;font-size:15px}
+.opt small{display:block;font-size:12px;color:var(--mute);margin-top:1px}
+.opt.new .oi{background:var(--pt-soft);color:var(--pt)}
+.opt.new .ot{color:var(--pt);font-weight:600}
+mark{background:none;color:var(--pt);font-weight:700}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-weight:500;font-size:14.5px;display:inline-flex;align-items:center;gap:6px}
+.chip svg{width:16px;height:16px;color:var(--sub)}
+.chip.on{background:var(--pt);color:#fff;border-color:var(--pt)}
+.chip.on svg{color:#fff}
+
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin:18px 0 4px}
+.cal-h b{font-size:15px}
+.cal-h .ibtn svg{width:20px;height:20px}
+.cal-h .ibtn:disabled{color:#C3CAD2;cursor:default;background:none}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal .dow{font-size:12px;color:var(--mute);text-align:center;padding:4px 0 6px}
+.day{height:54px;border:0;background:transparent;border-radius:14px;display:flex;flex-direction:column;align-items:center;padding-top:7px;gap:3px;position:relative;font-weight:500;font-size:15px}
+.day:not(:disabled):hover{background:var(--bg)}
+.day:disabled{color:#C3CAD2;cursor:default}
+.day.today{box-shadow:inset 0 0 0 1.5px var(--pt)}
+.day.sel,.day.sel:hover{background:var(--pt);color:#fff}
+.day svg{width:15px;height:15px;color:var(--mute)}
+.day .bad svg{color:var(--warn)}
+.day.sel svg,.day.sel .bad svg{color:#fff}
+.day .dot{position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:var(--pt)}
+.day.sel .dot{background:#fff}
+
+.tsum{background:var(--pt-soft);border-radius:18px;padding:16px;text-align:center}
+.tsum .d{color:var(--sub);font-size:14px;font-weight:500}
+.tsum .t{font-size:34px;font-weight:700;color:var(--pt);letter-spacing:-.5px;margin-top:2px}
+.wheels{position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:220px;margin-top:16px}
+.wheels::before{content:'';position:absolute;left:0;right:0;top:88px;height:44px;background:var(--bg);border-radius:12px}
+.wheel{position:relative;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;padding:88px 0;-webkit-mask-image:linear-gradient(transparent,#000 38%,#000 62%,transparent);mask-image:linear-gradient(transparent,#000 38%,#000 62%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.wheel button{display:block;width:100%;height:44px;border:0;background:none;scroll-snap-align:center;font-size:19px;color:var(--mute);transition:color .15s,font-size .15s}
+.wheel button.on{color:var(--ink);font-weight:700;font-size:22px}
+
+.map{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.tile{min-height:62px;border-radius:14px;border:1.5px solid transparent;background:var(--bg);padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.tile b{font-size:14px}
+.tile .tw{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub);font-weight:500}
+.tile .tw svg{width:14px;height:14px}
+.tile.bad{background:var(--warn-bg)}
+.tile.bad .tw{color:var(--warn)}
+.tile.on{border-color:var(--pt);background:var(--pt-soft)}
+.tile.on b{color:var(--pt)}
+.hint{font-size:12.5px;color:var(--sub);margin:10px 2px 0}
+
+.fcard{border-radius:18px;padding:16px;background:var(--cloud);border:1.5px solid transparent;min-height:96px}
+.fcard.t-clear{background:var(--sun)} .fcard.t-bad{background:var(--warn-bg);border-color:var(--warn-line)}
+.fcard.t-wait{background:#fff;border:1.5px dashed #C5CDD6}
+.fcard .fh{font-size:13px;font-weight:600;color:var(--sub)}
+.fcard .wx{margin-top:10px}
+.fcard .wx .wxi svg{width:40px;height:40px}
+.fcard .wx .tmp{font-size:32px}
+.muted{color:var(--mute);font-size:13.5px;margin:0}
+.acards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acard{position:relative;display:block}
+.acard input,.seg input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer}
+.acard .ac{display:flex;flex-direction:column;gap:4px;min-height:88px;padding:12px;border-radius:16px;border:1.5px solid var(--line);background:#fff;transition:border-color .15s,background .15s}
+.acard .ac svg{width:22px;height:22px;color:var(--sub)}
+.acard b{font-size:15px}
+.acard small{font-size:12px;color:var(--sub);line-height:1.35}
+.acard input:checked + .ac{border-color:var(--pt);background:var(--pt-soft)}
+.acard input:checked + .ac svg{color:var(--pt)}
+.acard input:focus-visible + .ac,.seg input:focus-visible + span{outline:2px solid var(--pt);outline-offset:2px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg);border-radius:14px;padding:4px;gap:4px}
+.seg label{position:relative}
+.seg span{display:grid;place-items:center;min-height:44px;border-radius:11px;font-size:14px;font-weight:500;color:var(--sub)}
+.seg input:checked + span{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ---------- 설정 ---------- */
+.card{background:#fff;border-radius:20px;padding:18px 16px;margin-bottom:12px}
+.card h3{margin:0 0 4px;font-size:15px}
+.card p.desc{margin:0 0 12px;font-size:12.5px;color:var(--sub);line-height:1.5}
+.field{display:block;margin-top:14px}
+.field span{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-bottom:6px}
+.field input{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font-size:15px;background:var(--bg)}
+.field input:focus{outline:2px solid var(--pt);outline-offset:-1px;background:#fff}
+.btn{width:100%;min-height:48px;border-radius:14px;border:0;background:var(--pt);color:#fff;font-weight:600;margin-top:16px}
+.btn:disabled{background:#B5C2D3;cursor:default}
+.tres{margin:10px 0 0;font-size:13px;font-weight:600;min-height:20px}
+.tres.ok{color:#1F7A45} .tres.fail{color:var(--warn)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 화면 1. 메인 -->
+  <section class="screen" id="main" aria-label="할 일 목록">
+    <header class="top">
+      <div class="ttl">
+        <div class="date" id="todayLbl"></div>
+        <h1>날씨 투두</h1>
+      </div>
+      <button class="ibtn" data-act="inbox" id="bellBtn" aria-label="알림함"></button>
+      <button class="ibtn" data-act="settings" id="gearBtn" aria-label="설정"></button>
+    </header>
+    <div class="scroll" id="mainScroll"></div>
+    <div class="src" id="srcBadge" aria-live="polite"><i></i><span>mock</span></div>
+    <button class="fab" data-act="add" id="fab" aria-label="할 일 추가"></button>
+  </section>
+
+  <!-- 화면 2. 할 일 추가 -->
+  <section class="screen" id="add" hidden aria-label="할 일 추가">
+    <header class="atop">
+      <button class="ibtn" data-act="close-add" id="closeAdd" aria-label="닫기"></button>
+      <h2>할 일 추가</h2>
+      <div class="stepl" id="stepLbl" aria-live="polite">1/5</div>
+    </header>
+    <div class="prog" id="prog" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="wscroll" id="wscroll"></div>
+    <div class="bbar">
+      <button class="back" data-act="back" id="backBtn" aria-label="이전 단계"></button>
+      <button class="nextb" data-act="next" id="nextBtn">다음</button>
+    </div>
+  </section>
+
+  <!-- 화면 3. 설정 -->
+  <section class="screen" id="settings" hidden aria-label="설정">
+    <header class="atop">
+      <button class="ibtn" data-act="close-settings" id="closeSettings" aria-label="뒤로"></button>
+      <h2>설정</h2>
+      <div class="stepl"></div>
+    </header>
+    <div class="wscroll">
+      <div class="card">
+        <h3>데이터 출처</h3>
+        <p class="desc">mock은 내장된 가짜 예보, Dify는 워크플로 API에서 예보를 받아요.</p>
+        <div class="seg" role="radiogroup" aria-label="데이터 출처" style="grid-template-columns:1fr 1fr">
+          <label><input type="radio" name="mode" value="mock" checked><span>mock</span></label>
+          <label><input type="radio" name="mode" value="dify"><span>Dify</span></label>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Dify 연결</h3>
+        <p class="desc">입력값은 이 탭의 메모리에만 보관돼요. 새로고침하면 사라집니다.</p>
+        <label class="field"><span>API 주소</span><input id="difyUrl" type="url" autocomplete="off" spellcheck="false"></label>
+        <label class="field"><span>앱 API 키</span><input id="difyKey" type="password" autocomplete="off" placeholder="프록시 주소면 비워두세요"></label>
+        <button class="btn" data-act="test" id="testBtn">연결 테스트</button>
+        <p class="tres" id="testRes" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 알림함 -->
+  <div class="sheet" id="inbox" hidden>
+    <button class="scrim" data-act="close-inbox" aria-label="알림함 닫기" tabindex="-1"></button>
+    <section class="sheet-p" role="dialog" aria-modal="true" aria-labelledby="inboxT">
+      <div class="sheet-h">
+        <h2 id="inboxT">알림함</h2>
+        <button class="txtbtn" data-act="read-all" id="readAll">모두 읽음</button>
+        <button class="ibtn" data-act="close-inbox" id="closeInbox" aria-label="알림함 닫기"></button>
+      </div>
+      <ul class="nlist" id="nlist"></ul>
+    </section>
+  </div>
+
+  <div class="topstack" id="topstack" aria-live="polite"></div>
+</div>
+
+<script>
+/* ===================== 기준 시각 · 유틸 ===================== */
+const TODAY = '2026-10-02';               // 기준 날짜 고정 (금)
+const now = () => { const d = new Date(); return new Date(2026, 9, 2, d.getHours(), d.getMinutes()); };
+const pad = n => String(n).padStart(2, '0');
+const DOW = '일월화수목금토';
+const ds = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return ds(d); };
+const offset = s => Math.round((parseD(s) - parseD(TODAY)) / 864e5);
+const fmtDate = s => { const d = parseD(s); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`; };
+const fmtShort = s => { const d = parseD(s); return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]})`; };
+const fmtTime = t => { const [h, m] = t.split(':').map(Number); return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${pad(m)}`; };
+const whenOf = t => { const d = parseD(t.date); const [h, m] = t.time.split(':').map(Number); d.setHours(h, m); return d; };
+const placeOf = t => `${t.sido} ${t.district}`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = s => document.querySelector(s);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const motion = () => reduced.matches ? 'auto' : 'smooth';
+
+/* ===================== 아이콘 (선 스타일 SVG) ===================== */
+const sv = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I = {
+  sun: sv('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M2.5 12h2M19.5 12h2M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'),
+  cloud: sv('<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.1 4.5 4.5 0 0 0 7 18z"/>'),
+  rain: sv('<path d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 5.1 4.5 4.5 0 0 0 7 14z"/><path d="M8.5 17.5l-1 2.5M12.5 17.5l-1 2.5M16.5 17.5l-1 2.5"/>'),
+  wind: sv('<path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5M3 16h7"/>'),
+  snow: sv('<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 6l2.5-1.5M9.5 19.5L12 18l2.5 1.5"/>'),
+  temp: sv('<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/>'),
+  bell: sv('<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>'),
+  clock: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  pin: sv('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+  gear: sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  search: sv('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>'),
+  x: sv('<path d="M6 6l12 12M18 6L6 18"/>'),
+  back: sv('<path d="M15 5l-7 7 7 7"/>'),
+  fwd: sv('<path d="M9 5l7 7-7 7"/>'),
+  plus: sv('<path d="M12 5v14M5 12h14"/>'),
+  spark: sv('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>'),
+  home: sv('<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>'),
+  work: sv('<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V5h6v2.5"/>'),
+};
+
+/* ===================== 지역 (시·도 → 대표 시·군·구 위경도) ===================== */
+// r,c: 4열 지도 타일 위치
+const REGIONS = [
+  { name: '인천', r: 1, c: 1, ds: [['연수구', 37.410, 126.678], ['중구', 37.474, 126.621], ['남동구', 37.447, 126.731], ['강화군', 37.747, 126.488]] },
+  { name: '서울', r: 1, c: 2, ds: [['종로구', 37.573, 126.979], ['마포구', 37.566, 126.901], ['영등포구', 37.526, 126.896], ['성동구', 37.563, 127.037], ['강남구', 37.517, 127.047], ['송파구', 37.514, 127.106]] },
+  { name: '경기', r: 1, c: 3, ds: [['수원시', 37.263, 127.029], ['성남시', 37.420, 127.127], ['고양시', 37.658, 126.832], ['용인시', 37.241, 127.178], ['파주시', 37.760, 126.780], ['가평군', 37.831, 127.510]] },
+  { name: '강원', r: 1, c: 4, ds: [['춘천시', 37.881, 127.730], ['원주시', 37.342, 127.920], ['강릉시', 37.752, 128.876], ['속초시', 38.207, 128.592], ['평창군', 37.371, 128.390]] },
+  { name: '충남', r: 2, c: 1, ds: [['천안시', 36.815, 127.114], ['공주시', 36.447, 127.119], ['보령시', 36.333, 126.613], ['태안군', 36.746, 126.298]] },
+  { name: '세종', r: 2, c: 2, ds: [['세종시', 36.480, 127.289], ['조치원읍', 36.603, 127.298]] },
+  { name: '충북', r: 2, c: 3, ds: [['청주시', 36.642, 127.489], ['충주시', 36.991, 127.926], ['제천시', 37.133, 128.191], ['단양군', 36.985, 128.366]] },
+  { name: '경북', r: 2, c: 4, ds: [['포항시', 36.019, 129.343], ['경주시', 35.856, 129.225], ['안동시', 36.568, 128.730], ['울릉군', 37.484, 130.906]] },
+  { name: '전북', r: 3, c: 1, ds: [['전주시', 35.824, 127.148], ['군산시', 35.968, 126.737], ['남원시', 35.416, 127.390], ['무주군', 36.007, 127.661]] },
+  { name: '대전', r: 3, c: 2, ds: [['유성구', 36.362, 127.356], ['서구', 36.355, 127.384], ['중구', 36.326, 127.421], ['대덕구', 36.347, 127.416]] },
+  { name: '대구', r: 3, c: 3, ds: [['중구', 35.869, 128.606], ['수성구', 35.858, 128.631], ['달서구', 35.830, 128.533], ['북구', 35.886, 128.583]] },
+  { name: '울산', r: 3, c: 4, ds: [['남구', 35.544, 129.330], ['중구', 35.569, 129.333], ['동구', 35.505, 129.417], ['울주군', 35.522, 129.243]] },
+  { name: '전남', r: 4, c: 1, ds: [['목포시', 34.812, 126.392], ['여수시', 34.760, 127.662], ['순천시', 34.951, 127.487], ['담양군', 35.321, 126.988]] },
+  { name: '광주', r: 4, c: 2, ds: [['동구', 35.146, 126.923], ['서구', 35.152, 126.890], ['북구', 35.174, 126.912], ['광산구', 35.140, 126.794]] },
+  { name: '경남', r: 4, c: 3, ds: [['창원시', 35.228, 128.681], ['진주시', 35.180, 128.108], ['통영시', 34.854, 128.433], ['거제시', 34.880, 128.621]] },
+  { name: '부산', r: 4, c: 4, ds: [['해운대구', 35.163, 129.164], ['부산진구', 35.163, 129.053], ['수영구', 35.146, 129.113], ['중구', 35.106, 129.032], ['기장군', 35.244, 129.222]] },
+  { name: '제주', r: 5, c: 1, ds: [['제주시', 33.500, 126.531], ['서귀포시', 33.254, 126.560]] },
+];
+const regionOf = name => REGIONS.find(r => r.name === name);
+const coordOf = t => { const d = regionOf(t.sido).ds.find(x => x[0] === t.district); return [d[1], d[2]]; };
+const FAV = [{ label: '집', icon: 'home', sido: '서울', district: '마포구' }, { label: '회사', icon: 'work', sido: '서울', district: '강남구' }];
+
+const ALERTS = {
+  rain: { label: '비', desc: '강수확률 60% 이상 또는 비 예보', icon: 'rain' },
+  wind: { label: '강풍', desc: '풍속 14m/s 이상', icon: 'wind' },
+  snow: { label: '눈', desc: '적설 예보', icon: 'snow' },
+  temp: { label: '폭염·한파', desc: '33도 이상, 영하 10도 이하', icon: 'temp' },
+};
+// 판정 기준은 Dify 워크플로(weather-todo-workflow.yml)와 동일
+const isRain = f => f.pop >= 60 || f.condition === 'rain';
+const isWind = f => f.wind >= 14;
+const TIMING = { day: '하루 전', h3: '3시간 전', both: '둘 다' };
+const COND = { clear: '맑음', cloudy: '흐림', rain: '비', snow: '눈', wind: '바람' };
+const RECS = ['캠핑', '자전거 라이딩', '등산', '한강 피크닉', '러닝', '골프 라운딩', '낚시', '서핑', '세차', '빨래 널기', '야외 촬영', '단풍 구경', '불꽃축제 구경'];
+
+/* ===================== 상태 ===================== */
+// Worker 배포 후 주소를 넣으면 첫 화면부터 Dify로 바로 연결된다 (키는 Worker secret에만 있음)
+const PROXY_URL = 'https://weather-todo-proxy.tizmfns1218.workers.dev';
+const state = {
+  mode: PROXY_URL ? 'dify' : 'mock',
+  dify: { url: PROXY_URL || 'https://api.dify.ai/v1', key: '' },   // 직접 연결용 키는 메모리에만 보관
+  todos: [],
+  notes: [],
+  seen: new Set(),
+};
+let uid = 0;
+const mkTodo = (title, date, time, sido, district, alerts, extra = {}) =>
+  ({ id: ++uid, title, date, time, sido, district, alerts, timing: 'day', done: false, sim: false, fc: null, ...extra });
+state.todos = [
+  mkTodo('세탁물 찾기', '2026-10-02', '09:30', '서울', '마포구', ['rain'], { done: true }),
+  mkTodo('팀 점심 회식', '2026-10-02', '12:30', '서울', '강남구', ['rain']),
+  mkTodo('한강 자전거 라이딩', '2026-10-02', '19:00', '서울', '영등포구', ['rain', 'wind'], { timing: 'h3' }),
+  mkTodo('속초 바다 서핑', '2026-10-03', '10:00', '강원', '속초시', ['wind', 'rain'], { timing: 'both' }),
+  mkTodo('가평 가족 캠핑', '2026-10-04', '14:00', '경기', '가평군', ['rain', 'wind']),
+  mkTodo('부모님 댁 방문', '2026-10-05', '11:00', '대전', '유성구', ['rain']),
+  mkTodo('제주 올레길 걷기', '2026-10-06', '09:00', '제주', '서귀포시', ['rain', 'wind']),
+  mkTodo('친구 결혼식', '2026-10-10', '13:00', '부산', '해운대구', ['rain']),
+  mkTodo('설악산 단풍 구경', '2026-10-17', '08:00', '강원', '속초시', ['rain', 'wind', 'temp']),
+];
+
+/* ===================== 예보: mock ===================== */
+const hash = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return (h >>> 0) / 4294967296; };
+// 시·도|날짜오프셋 → 악화 예보 고정 (샘플 2건 + 서울 월요일 비)
+const MOCK_OVERRIDE = {
+  '강원|1': { condition: 'wind', pop: 30, wind: 16, temp: 15 },
+  '경기|2': { condition: 'rain', pop: 80, wind: 6, temp: 16 },
+  '서울|3': { condition: 'rain', pop: 70, wind: 5, temp: 17 },
+};
+function mockBase(sido, off) {
+  const r = hash(sido + off), warm = sido === '제주' ? 4 : ['부산', '울산', '경남', '전남', '광주'].includes(sido) ? 2 : 0;
+  const pop = Math.round(hash(off + sido + 'p') * 4) * 10;          // 0~40%: 기본값은 악화 아님
+  const b = { temp: Math.round(14 + r * 7 + warm), pop, wind: Math.round(1 + hash(sido + 'w' + off) * 7) };
+  b.condition = pop >= 40 ? 'cloudy' : r > 0.4 ? 'clear' : 'cloudy';
+  return { ...b, ...MOCK_OVERRIDE[sido + '|' + off] };
+}
+const UNAVAILABLE = { temp: null, pop: null, wind: null, condition: 'unknown', is_bad: false, reasons: [], message: '', forecast_available: false };
+function mockForecast(t) {
+  const off = offset(t.date);
+  if (off < 0 || off > 4) return { ...UNAVAILABLE };
+  const b = mockBase(t.sido, off), h = +t.time.slice(0, 2);
+  const f = { ...b, temp: b.temp + (h >= 12 && h <= 16 ? 3 : (h < 7 || h >= 21) ? -4 : 0) };
+  if (t.sim) Object.assign(f, { condition: 'rain', pop: 90, wind: 15 });   // 악화 시뮬레이션
+  const reasons = [];
+  if (t.alerts.includes('rain') && isRain(f)) reasons.push(`비 ${f.pop}%`);
+  if (t.alerts.includes('wind') && isWind(f)) reasons.push(`강풍 ${f.wind}m/s`);
+  if (t.alerts.includes('snow') && f.condition === 'snow') reasons.push('눈 예보');
+  if (t.alerts.includes('temp') && (f.temp >= 33 || f.temp <= -10)) reasons.push(f.temp >= 33 ? `폭염 ${f.temp}°` : `한파 ${f.temp}°`);
+  const tip = reasons[0]?.startsWith('비') ? '우산을 챙기거나 일정을 조정해 보세요.' : '야외 활동에 주의하세요.';
+  return {
+    temp: f.temp, pop: f.pop, wind: f.wind, condition: f.condition,
+    is_bad: reasons.length > 0, reasons,
+    message: reasons.length ? `${fmtShort(t.date)} ${fmtTime(t.time)} ‘${t.title}’ · ${placeOf(t)}에 ${reasons.join(', ')} 예보가 있어요. ${tip}` : '',
+    forecast_available: true,
+  };
+}
+
+/* ===================== 예보: Dify ===================== */
+const bool = v => v === true || v === 'true' || v === 1 || v === '1';
+const num = v => v === null || v === undefined || v === '' ? null : Math.round(Number(v));
+// 워크플로는 sun/cloud/rain/snow/wind/pending 을 돌려준다
+const COND_MAP = { sun: 'clear', clear: 'clear', cloud: 'cloudy', clouds: 'cloudy', cloudy: 'cloudy', rain: 'rain', drizzle: 'rain', thunderstorm: 'rain', snow: 'snow', wind: 'wind' };
+function normalize(o) {
+  if (o.error) throw new Error(o.error);                                   // OWM 키 오류 등은 '예보 공개 전'이 아니라 실패로
+  const available = o.forecast_available === undefined ? true : bool(o.forecast_available);
+  if (!available) return { ...UNAVAILABLE };
+  const reasons = Array.isArray(o.reasons) ? o.reasons.map(String) : String(o.reasons || '').split(',').map(s => s.trim()).filter(Boolean);
+  return {
+    temp: num(o.temp), pop: num(o.pop) ?? 0, wind: num(o.wind) ?? 0,
+    condition: COND_MAP[String(o.condition || '').toLowerCase()] || 'cloudy',
+    is_bad: bool(o.is_bad),
+    reasons: reasons.map(r => ALERTS[r]?.label ?? r),                      // rain → 비
+    message: String(o.message || ''),
+    forecast_available: true,
+  };
+}
+async function difyForecast(t) {
+  const [lat, lon] = coordOf(t);
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const res = await fetch(state.dify.url.replace(/\/+$/, '') + '/workflows/run', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json', ...(state.dify.key && { Authorization: 'Bearer ' + state.dify.key }) },   // 프록시면 키 없이
+      body: JSON.stringify({
+        inputs: { lat, lon, target_time: `${t.date}T${t.time}:00+09:00`, alert_types: t.alerts.join(','), title: t.title },
+        response_mode: 'blocking', user: 'demo-user',
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    if (j.data?.status && j.data.status !== 'succeeded') throw new Error(j.data.error || j.data.status);
+    if (!j.data?.outputs) throw new Error('outputs 없음');
+    return normalize(j.data.outputs);
+  } catch (e) {
+    throw e.name === 'AbortError' ? new Error('시간 초과') : e;
+  } finally { clearTimeout(timer); }
+}
+
+/* 화면은 이 함수만 호출한다 */
+async function getForecast(t) {
+  if (state.mode === 'dify' && !t.sim) {
+    try { return await difyForecast(t); }
+    catch (e) { notice(`Dify 호출 실패(${e.message}) · 해당 할 일은 mock 예보로 대체했어요`); }
+  }
+  return mockForecast(t);
+}
+
+/* ===================== 날씨 표현 ===================== */
+function wxIcon(f) {
+  if (!f || !f.forecast_available) return I.clock;
+  if (f.condition === 'snow') return I.snow;
+  if (isRain(f)) return I.rain;
+  if (f.wind >= 14 || f.condition === 'wind') return I.wind;
+  return f.condition === 'clear' ? I.sun : I.cloud;
+}
+const tone = f => !f || !f.forecast_available ? 'wait' : f.is_bad ? 'bad' : f.condition === 'clear' && f.pop < 60 ? 'clear' : 'cloud';
+const alertText = a => a.length ? a.map(k => ALERTS[k].label).join('·') : '알림 없음';
+function wxBlock(f) {
+  return `<div class="wx"><span class="wxi">${wxIcon(f)}</span>
+    <div><div class="tmp">${f.temp}°</div><div class="cond">${COND[f.condition] || ''}</div></div>
+    <dl><div><dt>강수</dt><dd>${f.pop}%</dd></div><div><dt>바람</dt><dd>${f.wind}m/s</dd></div></dl></div>`;
+}
+const reasonLine = f => f.is_bad ? `<p class="reason">${I.bell}<span>${esc(f.reasons.join(' · ') || '기상악화 예보')}</span></p>` : '';
+
+/* ===================== 알림 ===================== */
+let bannerTimer;
+function checkAlert(t) {
+  const f = t.fc;
+  if (t.done || !f?.forecast_available || !f.is_bad) return;
+  const key = t.id + '|' + f.reasons.join(',');
+  if (state.seen.has(key)) return;
+  state.seen.add(key);
+  const n = { id: Date.now() + Math.random(), todoId: t.id, title: t.title, message: f.message || `${placeOf(t)}에 ${f.reasons.join(', ')} 예보가 있어요.`, at: now(), timing: t.timing, read: false };
+  state.notes.unshift(n);
+  showBanner(n);
+}
+function showBanner(n) {
+  $('#banner')?.remove();
+  const el = document.createElement('div');
+  el.className = 'banner'; el.id = 'banner'; el.setAttribute('role', 'alert');
+  el.innerHTML = `<button class="bmain" data-act="inbox">${I.bell}<span><b>날씨 알림 · ${esc(n.title)}</b><span>${esc(n.message)}</span></span></button>
+    <button class="ibtn" data-act="banner-close" aria-label="알림 배너 닫기">${I.x}</button>`;
+  $('#topstack').prepend(el);
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => el.remove(), 7000);
+  renderBadge();
+}
+function notice(msg, info = false) {
+  const stack = $('#topstack');
+  if ([...stack.querySelectorAll('.notice')].some(n => n.textContent === msg)) return;   // 일괄 조회 시 중복 안내 방지
+  const el = document.createElement('div');
+  el.className = 'notice' + (info ? ' info' : '');
+  el.setAttribute('role', 'status');
+  el.textContent = msg;
+  stack.append(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+/* ===================== 조회 ===================== */
+async function refresh(t) {
+  const f = await getForecast(t);
+  t.fc = f;
+  checkAlert(t);
+  renderMain();
+  return f;
+}
+const refreshAll = () => Promise.all(state.todos.map(refresh));
+
+/* ===================== 화면 1. 메인 ===================== */
+const sorted = () => [...state.todos].sort((a, b) => whenOf(a) - whenOf(b));
+function groupOf(t) {
+  const o = offset(t.date), toSun = (7 - parseD(TODAY).getDay()) % 7;
+  if (o <= 0) return 'today';
+  if (o <= Math.max(1, toSun)) return 'soon';
+  if (o <= 4) return 'upcoming';
+  return 'later';
+}
+const GROUPS = [['today', '오늘'], ['soon', '내일·주말'], ['upcoming', '다가오는 할 일'], ['later', '예보 공개 전']];
+
+function leftText(t) {
+  const mins = Math.round((whenOf(t) - now()) / 6e4), o = offset(t.date);
+  if (o === 0) return mins < 60 ? `${mins}분 남음` : `${Math.floor(mins / 60)}시간 ${mins % 60}분 남음`;
+  return o === 1 ? '내일' : `${o}일 후`;
+}
+function badge(t) {
+  const f = t.fc;
+  if (!f) return `<span class="wb load">불러오는 중</span>`;
+  if (!f.forecast_available) return `<span class="wb wait">${I.clock}대기</span>`;
+  const txt = isRain(f) ? `비 ${f.pop}%` : isWind(f) ? `바람 ${f.wind}m/s` : `${f.temp}°`;
+  return `<span class="wb ${tone(f)}">${wxIcon(f)}${txt}</span>`;
+}
+function rowHTML(t) {
+  const f = t.fc, cls = [t.done && 'done', f?.is_bad && !t.done && 'bad', f && !f.forecast_available && 'pending'].filter(Boolean).join(' ');
+  return `<li class="row ${cls}" data-id="${t.id}">
+    <label class="cbw"><input type="checkbox" class="cb" data-done="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} 완료"></label>
+    <div class="rb">
+      <div class="rt">${esc(t.title)}</div>
+      <div class="rm">${groupOf(t) === 'today' ? '' : fmtShort(t.date) + ' '}${fmtTime(t.time)} · ${placeOf(t)}</div>
+      <div class="ra">${I.bell}${alertText(t.alerts)}</div>
+    </div>
+    ${badge(t)}
+  </li>`;
+}
+function nextHTML() {
+  const t = sorted().find(t => !t.done && whenOf(t) >= now());
+  if (!t) return '';
+  const f = t.fc, tn = f ? tone(f) : 'cloud';
+  return `<article class="next t-${tn}" aria-label="다음 할 일">
+    <div class="lbl">다음 할 일 <span class="left">${leftText(t)}</span></div>
+    <h2>${esc(t.title)}</h2>
+    <div class="meta">${I.clock}${fmtShort(t.date)} ${fmtTime(t.time)} · ${I.pin}${placeOf(t)}</div>
+    ${!f ? '<p class="waitmsg">예보 불러오는 중…</p>'
+      : !f.forecast_available ? `<p class="waitmsg">${I.clock}예보 공개 전이에요. 5일 전부터 확인해 드려요.</p>`
+      : wxBlock(f) + reasonLine(f)}
+    <div class="achips">${t.alerts.map(a => `<span class="achip">${I[ALERTS[a].icon]}${ALERTS[a].label}</span>`).join('') || '<span class="achip">알림 없음</span>'}</div>
+  </article>`;
+}
+function renderMain() {
+  const list = sorted();
+  const groups = GROUPS.map(([k, label]) => {
+    const items = list.filter(t => groupOf(t) === k);
+    if (!items.length) return '';
+    return `<section class="group" aria-label="${label}"><h3><span>${label}</span><span>${items.length}</span></h3>
+      <ul class="list">${items.map(rowHTML).join('')}</ul></section>`;
+  }).join('');
+  $('#mainScroll').innerHTML = nextHTML() + (groups || '<p class="empty">할 일이 없어요. + 버튼으로 추가해 보세요.</p>') +
+    `<div class="demo"><p>데모: 다음 할 일의 예보가 비 90%·강풍 15m/s로 악화되는 상황을 재현해요. 고른 알림 조건에 해당할 때만 알림이 와요.</p>
+     <button data-act="sim">악화 예보 시뮬레이션</button></div>`;
+  renderBadge();
+}
+function renderBadge() {
+  const n = state.notes.filter(x => !x.read).length;
+  $('#bellBtn').innerHTML = I.bell + (n ? `<span class="count">${n}</span>` : '');
+  $('#bellBtn').setAttribute('aria-label', n ? `알림함, 읽지 않은 알림 ${n}개` : '알림함');
+}
+function renderSource() {
+  const el = $('#srcBadge');
+  el.classList.toggle('dify', state.mode === 'dify');
+  el.querySelector('span').textContent = state.mode === 'dify' ? 'Dify' : 'mock';
+  el.setAttribute('aria-label', `데이터 출처: ${state.mode === 'dify' ? 'Dify' : 'mock'}`);
+}
+
+/* ===================== 알림함 ===================== */
+function renderInbox() {
+  $('#nlist').innerHTML = state.notes.length ? state.notes.map(n => `<li>
+    <button class="nitem ${n.read ? '' : 'unread'}" data-act="read" data-n="${n.id}">
+      <span class="dot"></span>
+      <span><b>${esc(n.title)}</b><p>${esc(n.message)}</p>
+      <small>${pad(n.at.getMonth() + 1)}/${pad(n.at.getDate())} ${fmtTime(`${pad(n.at.getHours())}:${pad(n.at.getMinutes())}`)} · ${TIMING[n.timing]} 알림</small></span>
+    </button></li>`).join('') : '<li class="empty">아직 받은 알림이 없어요.</li>';
+  $('#readAll').disabled = !state.notes.some(n => !n.read);
+}
+let inboxReturn;
+function openInbox() { inboxReturn = document.activeElement; renderInbox(); $('#inbox').hidden = false; $('#closeInbox').focus(); }
+function closeInbox() { $('#inbox').hidden = true; inboxReturn?.focus?.(); }
+
+/* ===================== 화면 2. 할 일 추가 ===================== */
+const W = { step: 1, d: null, vm: null, list: [] };
+function openAdd() {
+  W.step = 1; W.vm = null;
+  W.d = { title: '', date: null, time: null, sido: null, district: null, alerts: ['rain'], timing: 'day' };
+  show('add'); renderWizard(true);
+}
+const valid = s => s === 1 ? !!W.d.title.trim() : s === 2 ? !!W.d.date : s === 3 ? !!W.d.time : s === 4 ? !!(W.d.sido && W.d.district) : true;
+function go(n) {
+  if (n === 3 && !W.d.time) {
+    const h = W.d.date === TODAY ? Math.min(23, now().getHours() + 1) : 9;
+    W.d.time = `${pad(h)}:00`;
+  }
+  W.step = n; renderWizard(true);
+}
+function sumHTML(i) {
+  const [k, v] = [['무엇을', esc(W.d.title)], ['날짜', W.d.date && fmtDate(W.d.date)], ['시간', W.d.time && fmtTime(W.d.time)], ['어디서', W.d.district && placeOf(W.d)]][i - 1];
+  return `<button class="sum" data-act="go" data-n="${i}" aria-label="${k}: ${v}. 눌러서 수정"><span class="k">${k}</span><span class="v">${v}</span><span class="e">수정</span></button>`;
+}
+function renderWizard(anim) {
+  $('#stepLbl').textContent = `${W.step}/5`;
+  [...$('#prog').children].forEach((el, i) => el.classList.toggle('on', i < W.step));
+  $('#wscroll').innerHTML = [1, 2, 3, 4].filter(i => i < W.step).map(sumHTML).join('') +
+    `<section class="panel ${anim ? 'rise' : ''}" id="panel">${panelHTML()}</section>`;
+  afterPanel();
+  updateBar();
+  if (anim) scrollBottom();
+  if (W.step !== 1) $('#q')?.focus({ preventScroll: true });
+}
+function rerenderPanel() { $('#panel').innerHTML = panelHTML(); afterPanel(); updateBar(); }
+function scrollBottom() { requestAnimationFrame(() => { const w = $('#wscroll'); w.scrollTo({ top: w.scrollHeight, behavior: motion() }); }); }
+function updateBar() {
+  $('#backBtn').hidden = W.step === 1;
+  $('#nextBtn').textContent = W.step === 5 ? '저장하고 날씨 받기' : '다음';
+  $('#nextBtn').disabled = !valid(W.step);
+}
+function panelHTML() { return [null, step1, step2, step3, step4, step5][W.step](); }
+function afterPanel() { ({ 1: after1, 3: after3, 5: after5 })[W.step]?.(); }
+
+/* 1단계: 무엇을 */
+function step1() {
+  return `<h3 id="q" tabindex="-1">무엇을 하나요?</h3>
+    <div class="search">${I.search}<input id="q1" type="search" placeholder="예: 캠핑, 자전거 라이딩" value="${esc(W.d.title)}" autocomplete="off" aria-label="할 일 검색" aria-controls="res"></div>
+    <div id="resWrap"></div>`;
+}
+function pastTodos() {
+  const seen = new Set();
+  return [...state.todos].sort((a, b) => b.id - a.id).filter(t => !seen.has(t.title) && seen.add(t.title))
+    .map(t => ({ title: t.title, sido: t.sido, district: t.district, kind: 'past' }));
+}
+function hl(text, q) {
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  return i < 0 ? esc(text) : esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+}
+function renderResults() {
+  const q = W.d.title.trim(), past = pastTodos();
+  let head, items, showNew = false;
+  if (!q) { head = '최근 할 일'; items = past.slice(0, 6); }
+  else {
+    const recs = RECS.filter(r => !past.some(p => p.title === r)).map(title => ({ title, kind: 'rec' }));
+    items = [...past, ...recs].filter(x => x.title.toLowerCase().includes(q.toLowerCase()));
+    showNew = !items.some(x => x.title === q);
+    head = items.length ? '일치하는 항목' : '';
+  }
+  W.list = items;
+  $('#resWrap').innerHTML = (head ? `<h4>${head}</h4>` : '') + `<ul class="res" id="res">
+    ${showNew ? `<li><button class="opt new" data-act="new"><span class="oi">${I.plus}</span><span class="ot">‘${esc(q)}’ 새로 만들기</span></button></li>` : ''}
+    ${items.map((x, i) => `<li><button class="opt" data-act="pick" data-i="${i}"><span class="oi">${x.kind === 'past' ? I.clock : I.spark}</span>
+      <span class="ot">${q ? hl(x.title, q) : esc(x.title)}<small>${x.kind === 'past' ? '지난 할 일 · ' + x.sido + ' ' + x.district : '추천 활동'}</small></span></button></li>`).join('')}
+  </ul>`;
+}
+function after1() {
+  const inp = $('#q1');
+  inp.addEventListener('input', () => { W.d.title = inp.value; renderResults(); updateBar(); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && valid(1)) { e.preventDefault(); W.d.title = W.d.title.trim(); go(2); } });
+  renderResults();
+  inp.focus({ preventScroll: true });
+}
+
+/* 2단계: 날짜 */
+function step2() {
+  const dow = parseD(TODAY).getDay();
+  const quick = [['오늘', TODAY], ['내일', addDays(TODAY, 1)], ['이번 주말', addDays(TODAY, (6 - dow + 7) % 7)], ['다음 주 월요일', addDays(TODAY, ((8 - dow) % 7) || 7)]];
+  const base = parseD(W.d.date || TODAY);
+  W.vm ??= { y: base.getFullYear(), m: base.getMonth() };
+  const { y, m } = W.vm, first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
+  const t0 = parseD(TODAY), atMin = y === t0.getFullYear() && m === t0.getMonth();
+  const region = W.d.sido || '서울';
+  const busy = new Set(state.todos.map(t => t.date));
+  let cells = Array(first.getDay()).fill('<span></span>').join('');
+  for (let d = 1; d <= days; d++) {
+    const s = `${y}-${pad(m + 1)}-${pad(d)}`, o = offset(s);
+    let icon = '', note = '';
+    if (o >= 0 && o <= 4) {
+      const b = mockBase(region, o), bad = isRain(b) || isWind(b);
+      icon = `<span class="${bad ? 'bad' : ''}">${wxIcon({ ...b, forecast_available: true })}</span>`;
+      note = `, ${region} ${bad ? (isRain(b) ? '비 예보' : '강풍 예보') : COND[b.condition]}`;
+    }
+    cells += `<button class="day ${s === TODAY ? 'today' : ''} ${s === W.d.date ? 'sel' : ''}" data-act="date" data-d="${s}" ${s < TODAY ? 'disabled' : ''}
+      aria-label="${fmtDate(s)}${note}${busy.has(s) ? ', 할 일 있음' : ''}" ${s === W.d.date ? 'aria-pressed="true"' : ''}>${d}${icon}${busy.has(s) ? '<span class="dot"></span>' : ''}</button>`;
+  }
+  return `<h3 id="q" tabindex="-1">언제 하나요?</h3>
+    <div class="chips">${quick.map(([l, s]) => `<button class="chip ${W.d.date === s ? 'on' : ''}" data-act="date" data-d="${s}">${l}</button>`).join('')}</div>
+    <div class="cal-h">
+      <button class="ibtn" data-act="cal" data-n="-1" aria-label="이전 달" ${atMin ? 'disabled' : ''}>${I.back}</button>
+      <b aria-live="polite">${y}년 ${m + 1}월</b>
+      <button class="ibtn" data-act="cal" data-n="1" aria-label="다음 달">${I.fwd}</button>
+    </div>
+    <div class="cal">${[...DOW].map(d => `<span class="dow" aria-hidden="true">${d}</span>`).join('')}${cells}</div>
+    <p class="hint">5일 이내 날짜엔 ${region} 예보가, 할 일이 있는 날엔 점이 표시돼요.</p>`;
+}
+
+/* 3단계: 시간 */
+const ROW = 44;
+const WH = { ap: ['오전', '오후'], h: [...Array(12)].map((_, i) => String(i + 1)), m: ['00', '10', '20', '30', '40', '50'] };
+const WH_LABEL = { ap: '오전 오후', h: '시', m: '분' };
+const timeToIdx = t => { const [h, m] = t.split(':').map(Number); return { ap: h >= 12 ? 1 : 0, h: (h % 12 || 12) - 1, m: Math.min(5, Math.round(m / 10)) }; };
+const idxToTime = ix => `${pad(((ix.h + 1) % 12) + (ix.ap ? 12 : 0))}:${pad(ix.m * 10)}`;
+const QUICK_T = [['아침 9시', '09:00'], ['점심 12시', '12:00'], ['저녁 7시', '19:00']];
+function step3() {
+  return `<h3 id="q" tabindex="-1">몇 시에 하나요?</h3>
+    <div class="tsum"><div class="d">${fmtDate(W.d.date)}</div><div class="t" id="tbig" aria-live="polite">${fmtTime(W.d.time)}</div></div>
+    <div class="chips" style="margin-top:14px" id="tchips">${QUICK_T.map(([l, t]) => `<button class="chip ${W.d.time === t ? 'on' : ''}" data-act="tchip" data-t="${t}">${l}</button>`).join('')}</div>
+    <div class="wheels">${Object.keys(WH).map(k => `<div class="wheel" data-w="${k}" role="listbox" aria-label="${WH_LABEL[k]}" tabindex="0">
+      ${WH[k].map((v, i) => `<button role="option" data-act="witem" data-i="${i}" tabindex="-1">${v}</button>`).join('')}</div>`).join('')}</div>`;
+}
+function markWheel(w, i) { w._i = i; [...w.children].forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-selected', j === i); }); }
+function readWheels() {
+  const ix = {};
+  document.querySelectorAll('.wheel').forEach(w => ix[w.dataset.w] = w._i);
+  W.d.time = idxToTime(ix);
+  syncTime();
+}
+function syncTime() {
+  $('#tbig').textContent = fmtTime(W.d.time);
+  document.querySelectorAll('#tchips .chip').forEach(c => c.classList.toggle('on', c.dataset.t === W.d.time));
+}
+function setWheels(t, behavior) {
+  const ix = timeToIdx(t);
+  document.querySelectorAll('.wheel').forEach(w => w.scrollTo({ top: ix[w.dataset.w] * ROW, behavior }));
+}
+function after3() {
+  const ix = timeToIdx(W.d.time);
+  document.querySelectorAll('.wheel').forEach(w => {
+    const k = w.dataset.w, max = WH[k].length - 1;
+    w.scrollTop = ix[k] * ROW; markWheel(w, ix[k]);
+    w.addEventListener('scroll', () => {
+      const i = Math.max(0, Math.min(max, Math.round(w.scrollTop / ROW)));
+      if (w._i !== i) { markWheel(w, i); readWheels(); }
+    }, { passive: true });
+    w.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      w.scrollTo({ top: Math.max(0, Math.min(max, w._i + d)) * ROW, behavior: motion() });
+    });
+  });
+}
+
+/* 4단계: 어디서 */
+function step4() {
+  const o = offset(W.d.date), recent = [...state.todos].sort((a, b) => b.id - a.id)[0];
+  const favs = [...FAV, recent && { label: `최근 · ${placeOf(recent)}`, icon: 'clock', sido: recent.sido, district: recent.district }].filter(Boolean);
+  const tiles = REGIONS.map(r => {
+    let tw = '—', bad = false, note = '예보 공개 전';
+    if (o >= 0 && o <= 4) {
+      const b = mockBase(r.name, o);
+      bad = isRain(b) || isWind(b);
+      tw = `${b.temp}°${isRain(b) ? I.rain : ''}${isWind(b) ? I.wind : ''}`;
+      note = `${b.temp}도${isRain(b) ? ', 비 ' + b.pop + '%' : ''}${isWind(b) ? ', 강풍' : ''}`;
+    }
+    return `<button class="tile ${bad ? 'bad' : ''} ${W.d.sido === r.name ? 'on' : ''}" style="grid-row:${r.r};grid-column:${r.c}" data-act="sido" data-s="${r.name}"
+      aria-label="${r.name}, ${note}" ${W.d.sido === r.name ? 'aria-pressed="true"' : ''}><b>${r.name}</b><span class="tw">${tw}</span></button>`;
+  }).join('');
+  const reg = W.d.sido && regionOf(W.d.sido);
+  return `<h3 id="q" tabindex="-1">어디서 하나요?</h3>
+    <div class="chips">${favs.map(f => `<button class="chip ${W.d.sido === f.sido && W.d.district === f.district ? 'on' : ''}" data-act="place" data-s="${f.sido}" data-dd="${f.district}">${I[f.icon]}${esc(f.label)}</button>`).join('')}</div>
+    <h4>시·도 (${fmtShort(W.d.date)} 날씨)</h4>
+    <div class="map">${tiles}</div>
+    ${reg ? `<div class="rise" id="dist"><h4>${reg.name} 세부 지역</h4>
+      <div class="chips">${reg.ds.map(([d]) => `<button class="chip ${W.d.district === d ? 'on' : ''}" data-act="place" data-s="${reg.name}" data-dd="${d}">${d}</button>`).join('')}</div></div>` : ''}`;
+}
+
+/* 5단계: 날씨 알림 */
+function step5() {
+  return `<h3 id="q" tabindex="-1">어떤 날씨에 알려드릴까요?</h3>
+    <div class="fcard" id="pv" aria-live="polite"><p class="muted">예보 불러오는 중…</p></div>
+    <h4>받을 날씨</h4>
+    <div class="acards">${Object.entries(ALERTS).map(([k, a]) => `<label class="acard"><input type="checkbox" name="alert" value="${k}" ${W.d.alerts.includes(k) ? 'checked' : ''}>
+      <span class="ac">${I[a.icon]}<b>${a.label}</b><small>${a.desc}</small></span></label>`).join('')}</div>
+    <h4>알림 시점</h4>
+    <div class="seg" role="radiogroup" aria-label="알림 시점">${Object.entries(TIMING).map(([k, l]) => `<label><input type="radio" name="timing" value="${k}" ${W.d.timing === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
+}
+let pvTok = 0, pvTimer;
+async function loadPreview() {
+  const tok = ++pvTok;
+  const f = await getForecast({ ...W.d, id: 0, sim: false });
+  const el = $('#pv');
+  if (tok !== pvTok || !el) return;
+  el.className = `fcard t-${tone(f)}`;
+  el.innerHTML = `<div class="fh">${fmtShort(W.d.date)} ${fmtTime(W.d.time)} · ${placeOf(W.d)}</div>` +
+    (f.forecast_available ? wxBlock(f) + reasonLine(f) : `<p class="waitmsg">${I.clock}아직 예보가 공개되지 않았어요. 5일 전부터 확인해 드려요.</p>`);
+}
+function after5() { loadPreview(); }
+
+function save() {
+  const t = mkTodo(W.d.title.trim(), W.d.date, W.d.time, W.d.sido, W.d.district, [...W.d.alerts], { timing: W.d.timing });
+  state.todos.push(t);
+  show('main');
+  renderMain();
+  const row = document.querySelector(`.row[data-id="${t.id}"]`);
+  row?.scrollIntoView({ block: 'center', behavior: motion() });
+  row?.classList.add('flash');
+  refresh(t);
+}
+
+/* ===================== 화면 3. 설정 ===================== */
+let settingsDirty = false;
+function openSettings() {
+  settingsDirty = false;
+  document.querySelector(`input[name=mode][value=${state.mode}]`).checked = true;
+  $('#difyUrl').value = state.dify.url; $('#difyKey').value = state.dify.key;
+  $('#testRes').textContent = ''; $('#testRes').className = 'tres';
+  show('settings');
+  $('#closeSettings').focus();
+}
+async function testDify() {
+  const btn = $('#testBtn'), out = $('#testRes');
+  btn.disabled = true; out.className = 'tres'; out.textContent = '샘플 요청 보내는 중…';
+  const sample = { title: '연결 테스트', date: TODAY, time: `${pad(Math.min(23, now().getHours() + 3))}:00`, sido: '서울', district: '종로구', alerts: ['rain', 'wind', 'snow', 'temp'] };
+  try {
+    const f = await difyForecast(sample);
+    out.className = 'tres ok';
+    out.textContent = f.forecast_available ? `성공 · 서울 종로구 ${COND[f.condition]} ${f.temp}°, 강수 ${f.pop}%, 바람 ${f.wind}m/s` : '성공 · 응답은 받았지만 forecast_available이 false예요';
+  } catch (e) {
+    out.className = 'tres fail'; out.textContent = `실패 · ${e.message}`;
+  } finally { btn.disabled = false; }
+}
+
+/* ===================== 시뮬레이션 ===================== */
+async function simulate() {
+  const t = sorted().find(t => !t.done && !t.sim && offset(t.date) <= 4 && whenOf(t) >= now() && !t.fc?.is_bad);
+  if (!t) return notice('시뮬레이션할 다가오는 할 일이 없어요', true);
+  t.sim = true;
+  notice(`‘${t.title}’ 예보가 비 90%·강풍 15m/s로 바뀌었어요`, true);
+  const f = await refresh(t);
+  if (!f.is_bad) notice(`‘${t.title}’은 비·강풍 알림을 고르지 않아 알림이 오지 않았어요`, true);
+}
+
+/* ===================== 화면 전환 · 이벤트 ===================== */
+function show(id) { ['main', 'add', 'settings'].forEach(s => $('#' + s).hidden = s !== id); }
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const a = el.dataset.act;
+  switch (a) {
+    case 'add': openAdd(); break;
+    case 'settings': openSettings(); break;
+    case 'inbox': $('#banner')?.remove(); openInbox(); break;
+    case 'close-inbox': closeInbox(); break;
+    case 'read-all': state.notes.forEach(n => n.read = true); renderInbox(); renderBadge(); break;
+    case 'read': { const n = state.notes.find(x => String(x.id) === el.dataset.n); if (n) n.read = true; renderInbox(); renderBadge(); break; }
+    case 'banner-close': $('#banner')?.remove(); break;
+    case 'sim': simulate(); break;
+    case 'close-add': show('main'); $('#fab').focus(); break;
+    case 'close-settings':
+      show('main'); renderSource(); $('#gearBtn').focus();
+      if (settingsDirty) { state.todos.forEach(t => t.fc = null); renderMain(); refreshAll(); }
+      break;
+    case 'test': testDify(); break;
+    case 'back': go(W.step - 1); break;
+    case 'next':
+      if (!valid(W.step)) break;
+      if (W.step === 1) W.d.title = W.d.title.trim();
+      W.step === 5 ? save() : go(W.step + 1);
+      break;
+    case 'go': go(+el.dataset.n); break;
+    case 'pick': {
+      const x = W.list[+el.dataset.i];
+      W.d.title = x.title;
+      if (x.kind === 'past') { W.d.sido = x.sido; W.d.district = x.district; }   // 지난 장소 미리 채움
+      go(2); break;
+    }
+    case 'new': W.d.title = W.d.title.trim(); go(2); break;
+    case 'date': W.d.date = el.dataset.d; W.vm = null; go(3); break;
+    case 'cal': { const d = new Date(W.vm.y, W.vm.m + +el.dataset.n, 1); W.vm = { y: d.getFullYear(), m: d.getMonth() }; rerenderPanel(); break; }
+    case 'tchip': W.d.time = el.dataset.t; syncTime(); setWheels(W.d.time, motion()); break;
+    case 'witem': el.parentElement.scrollTo({ top: +el.dataset.i * ROW, behavior: motion() }); break;
+    case 'sido':
+      if (W.d.sido !== el.dataset.s) { W.d.sido = el.dataset.s; W.d.district = null; }
+      rerenderPanel(); scrollBottom(); break;
+    case 'place': W.d.sido = el.dataset.s; W.d.district = el.dataset.dd; go(5); break;
+  }
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.done) {
+    const t = state.todos.find(t => t.id === +el.dataset.done);
+    t.done = el.checked;
+    renderMain();
+    document.querySelector(`[data-done="${t.id}"]`)?.focus();
+  } else if (el.name === 'mode') {
+    state.mode = el.value; settingsDirty = true;
+    if (state.mode === 'dify' && !state.dify.key && !PROXY_URL) notice('Dify 앱 키를 입력해 주세요. 키가 없으면 mock으로 대체돼요', true);
+  } else if (el.name === 'alert') {
+    W.d.alerts = [...document.querySelectorAll('input[name=alert]:checked')].map(i => i.value);
+    clearTimeout(pvTimer); pvTimer = setTimeout(loadPreview, 250);
+  } else if (el.name === 'timing') {
+    W.d.timing = el.value;
+  }
+});
+$('#difyUrl').addEventListener('input', e => { state.dify.url = e.target.value.trim(); settingsDirty = true; });
+$('#difyKey').addEventListener('input', e => { state.dify.key = e.target.value.trim(); settingsDirty = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#inbox').hidden) closeInbox(); });
+
+/* ===================== 시작 ===================== */
+$('#gearBtn').innerHTML = I.gear;
+$('#fab').innerHTML = I.plus;
+$('#closeAdd').innerHTML = I.x;
+$('#closeSettings').innerHTML = I.back;
+$('#closeInbox').innerHTML = I.x;
+$('#backBtn').innerHTML = I.back;
+$('#todayLbl').textContent = fmtDate(TODAY);
+renderSource();
+renderMain();
+refreshAll();
+</script>
+</body>
+</html>
